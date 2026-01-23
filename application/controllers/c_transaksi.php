@@ -10,11 +10,17 @@ class c_transaksi extends CI_Controller {
 	{
 		parent::__construct();
 
+		 if (!$this->session->userdata('logincek')) {
+            redirect('auth/login');
+        }
+
 		$this->load->library('form_validation');
         $this->load->helper(array('url','form'));
 		$this->load->model('m_login');
 		$this->load->model('m_transaksi');
 		$this->load->library('upload');
+
+		
 	}
 
 	private function checkAndInsertFinalHandling($id_penerimaan, $report_no)
@@ -250,6 +256,38 @@ class c_transaksi extends CI_Controller {
 		$this->template->load('layout/template','adidas/penerimaan/index.php', $data);
 	}
 
+	public function hapus_penerimaan($id)
+	{
+		$this->load->model('m_transaksi');
+
+		// Cek apakah id_penerimaan sudah dipakai di report_handlingsample
+		$dipakai_di_handlingsample = $this->db
+			->where('id_penerimaan', $id)
+			->count_all_results('report_handlingsample');
+
+		// Cek apakah id_penerimaan sudah dipakai di report_kualitas
+		$dipakai_di_kualitas = $this->db
+			->where('id_penerimaan', $id)
+			->count_all_results('report_kualitas');
+
+		if ($dipakai_di_handlingsample > 0 || $dipakai_di_kualitas > 0) {
+			$this->session->set_flashdata('error', 'Data tidak dapat dihapus karena sudah digunakan di report.');
+			redirect('c_transaksi/daftar_penerimaan');
+			return;
+		}
+
+		// Jika aman, hapus dari tabel anak dulu
+		$this->db->where('id_penerimaan', $id);
+		$this->db->delete('tbl_kualitas');
+
+		// Kemudian hapus dari tabel penerimaan
+		$this->db->where('id_penerimaan', $id);
+		$this->db->delete('tbl_penerimaan');
+
+		$this->session->set_flashdata('success', 'Data penerimaan berhasil dihapus.');
+		redirect('c_transaksi/index_penerimaan');
+	}
+
 	public function tambah_penerimaan()
 	{
 		$this->load->model('m_transaksi');
@@ -270,8 +308,6 @@ class c_transaksi extends CI_Controller {
 		$data['ironing'] = $this->m_transaksi->getCareIroning();
 		$this->template->load('layout/template','adidas/penerimaan/tambah.php', $data);
 	}
-
-
 	public function tambahaksi_penerimaan()
 	{
 		// Generate data untuk QR code
@@ -406,7 +442,6 @@ class c_transaksi extends CI_Controller {
 		// Redirect ke halaman penerimaan
 		redirect('c_transaksi/index_penerimaan');
 	}
-
 	public function editaksi_penerimaan()
 	{
 		$id_penerimaan = $this->input->post('id_penerimaan');
@@ -531,8 +566,6 @@ class c_transaksi extends CI_Controller {
 		// Redirect
 		redirect('c_transaksi/index_penerimaan');
 	}
-
-
 	public function update_penerimaan()
 	{
 		$id = $this->input->post('id_penerimaan');
@@ -598,8 +631,6 @@ class c_transaksi extends CI_Controller {
 
 		redirect('c_transaksi/index_penerimaan');
 	}
-
-
 
 	public function _generate_data_qrcode()
     {
@@ -864,6 +895,205 @@ class c_transaksi extends CI_Controller {
 		$this->template->load('layout/template', 'adidas/penerimaan/edit.php', $data);
 	}
 
+	public function detail_penerimaan($id)
+	{
+		$where = array('id_penerimaan' => $id);
+		$this->load->model('m_transaksi');
+
+		// Ambil semua data kualitas berdasarkan id_penerimaan
+		$kualitas_data = $this->m_transaksi->getKualitasByPenerimaan($id);
+
+		// Ambil daftar color unik
+		$colors = [];
+		$test_required_all = [];
+		$color_of_map = [];
+
+		foreach ($kualitas_data as $row) {
+			$clr = trim($row->color);
+			if (!in_array($clr, $colors)) {
+				$colors[] = $clr;
+				//$color_of_map[] = $clr;
+				//$color_of_map[$clr] = trim($row->color_of); 
+			}
+			$test_required_all[] = trim($row->test_required);
+			$color_of_map[$clr] = trim($row->color_of);
+		}
+
+			// Daftar checkbox test yang tersedia
+		$checkbox_options = [
+			"Color Fastness to House Hold Laundering",
+			"Color Fastness to Water",
+			"Color Fastness to Perspiration",
+			"Color Fastness to Washing",
+			"Color Fastness to Rubbing",
+			"Color Fastness to Light Fastness",
+			"Color Fastness to Light Fastness Perspiration",
+			"Color Fastness to Phenolic Yellowing",
+			"Color Fastness to Saliva",
+			"Color Fastness Dye Transfer In Storage",
+			"Color Migration Fastness",
+			"Color Migration Oven Test",
+			"Color Fastness to Chlorinated Water",
+			"Color Fastness to Sea Water",
+			"Color Fastness to Chlorine Bleach",
+			"Color Fastness to Non-Chlorine Bleach",
+			"Dimensional Stability to Laundering",
+			"Appereance Change After Laundering",
+			"Spirality",
+			"Durability Test",
+			"Wearing Test",
+			"Cuttable Width",
+			"Fabric Weight",
+			"Product Weight",
+			"Piece Weight",
+			"Bow and Skew",
+			"Heat Shrinkage",
+			"Flammability",
+			"Elongation & Recovery",
+			"Fiber/Fuzz",
+			"ICI Pilling Box",
+			"Martindale Pilling",
+			"Random Tumble Pilling",
+			"Snagging (Snag Pod)",
+			"Abrasion Resistance",
+			"Abrasion Sock",
+			"Bursting Pnematic",
+			"Bursting Hydraulic",
+			"Ball Burst",
+			"Textile Material Thickness Measurement",
+			"Odour",
+			"Moisture Content",
+			"Accelerated Ageing by Hydrolysis",
+			"Residue & Ageing Test for Sticker",
+			"Pull of Force",
+			"Seam Slippage/Strength",
+			"Seam Slippage of Woven",
+			"Tear Strength",
+			"Yarn Strength",
+			"Tensile Strength",
+			"Tear Force",
+			"Thread Count",
+			"Water Absorbency (Drop Test)",
+			"Wicking Height",
+			"Evaporation Rate",
+			"Water Repellency (Spray Test)",
+			"Waterproof (Hydrostatic)",
+			"Air Permeability",
+			"Fibre Content",
+			"Oil Content",
+			"pH Value",
+			"Formaldehyde",
+			"Nickel Test",
+			"Azo Dyes",
+			"APEO",
+			"AP",
+			"Phthalates"
+			// Tambahkan item lain jika ada
+		];
+
+		// Buat daftar test_required unik
+		$test_required_all = array_unique($test_required_all);
+
+		// Pisahkan test yang ada dalam checkbox vs yang lainnya
+		$test_required_checked = [];
+		$test_required_other = [];
+
+		foreach ($test_required_all as $test_from_db) {
+			$found = false;
+
+			foreach ($checkbox_options as $option_label) {
+				// Normalisasi keduanya untuk menghindari perbedaan kecil
+				$clean_db     = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', $test_from_db)));
+				$clean_option = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', $option_label)));
+
+				if ($clean_db === $clean_option) {
+					$test_required_checked[] = $option_label; // simpan label asli dari checkbox
+					$found = true;
+					break;
+				}
+			}
+
+			if (!$found) {
+				$test_required_other[] = $test_from_db; // tidak cocok
+			}
+		}
+
+
+		// Ambil salah satu path gambar jika ada
+		$image_path = '';
+		foreach ($kualitas_data as $row) {
+			if (!empty($row->image_path)) {
+				$image_path = $row->image_path;
+				break;
+			}
+		}
+
+		// Siapkan data ke view
+		$data['penerimaan'] = [
+			'data'      => $this->m_transaksi->getByIdPenerimaan(['id_penerimaan' => $id], 'tbl_penerimaan')->row(),
+			'kualitas'  => $kualitas_data,
+			'email'     => $this->m_transaksi->getEmail()->result(),
+			'material'  => $this->m_transaksi->getMaterial()->result(),
+			'supplier'  => $this->m_transaksi->getSupplier()->result(),
+			'oekotex'   => $this->m_transaksi->getOekotex()->result(),
+			'stages'    => $this->m_transaksi->getStages()->result(),
+			'size'      => $this->m_transaksi->getSizecategory()->result(),
+			'washing'   => $this->m_transaksi->getCareWashing(),
+			'bleching'  => $this->m_transaksi->getCareBleching(),
+			'drying'    => $this->m_transaksi->getCareDrying(),
+			'profess'   => $this->m_transaksi->getCareProfess(),
+			'ironing'   => $this->m_transaksi->getCareIroning(),
+			'image_path' => $image_path,
+			'colors' => array_values($colors), // ex: ['a', 'b']
+			'color_of_map' => array_values($color_of_map),
+			'test_required_selected' => $test_required_checked, // checkbox yg dicentang
+			'test_required_other' => implode(', ', $test_required_other), // yang tidak tersedia di checkbox
+		];
+
+		// Load view edit
+		$this->template->load('layout/template', 'adidas/penerimaan/detail.php', $data);
+	}
+
+	public function detail_kualitas($id_penerimaan, $id_kualitas)
+{
+    $this->load->model('m_transaksi');
+
+    // Ambil semua data kualitas berdasarkan id_penerimaan
+    $kualitas_data = $this->m_transaksi->getKualitasByPenerimaan($id_penerimaan);
+
+    // Ambil data kualitas spesifik berdasarkan id_kualitas
+    $kualitas_satu = $this->m_transaksi->getKualitasById($id_kualitas);
+
+    if (!$kualitas_satu) {
+        show_404();
+    }
+
+    // Ambil image dari data ini saja
+    $image_path = !empty($kualitas_satu->image_path) ? $kualitas_satu->image_path : '';
+
+    $data['penerimaan'] = [
+        'data'          => $this->m_transaksi->getByIdPenerimaan(['id_penerimaan' => $id_penerimaan], 'tbl_penerimaan')->row(),
+        'kualitas'      => $kualitas_data, // list semua kualitas di penerimaan ini
+        'kualitas_satu' => $kualitas_satu, // hanya 1 untuk detail tampilan
+        'email'         => $this->m_transaksi->getEmail()->result(),
+        'material'      => $this->m_transaksi->getMaterial()->result(),
+        'supplier'      => $this->m_transaksi->getSupplier()->result(),
+        'oekotex'       => $this->m_transaksi->getOekotex()->result(),
+        'stages'        => $this->m_transaksi->getStages()->result(),
+        'size'          => $this->m_transaksi->getSizecategory()->result(),
+        'washing'       => $this->m_transaksi->getCareWashing(),
+        'bleching'      => $this->m_transaksi->getCareBleching(),
+        'drying'        => $this->m_transaksi->getCareDrying(),
+        'profess'       => $this->m_transaksi->getCareProfess(),
+        'ironing'       => $this->m_transaksi->getCareIroning(),
+        'image_path'    => $image_path,
+        'color'         => trim($kualitas_satu->color),
+        'color_of'      => trim($kualitas_satu->color_of),
+        'test_required' => trim($kualitas_satu->test_required),
+    ];
+
+    $this->template->load('layout/template', 'adidas/kualitas/detail.php', $data);
+	}
 
 	public function editaksi_report()
 	{
@@ -908,13 +1138,6 @@ class c_transaksi extends CI_Controller {
 		} else {
 			redirect('c_transaksi/index_report');
 		}
-	}
-
-	public function detail_penerimaan($id)
-	{
-		$where = array('id_penerimaan' => $id);
-		$data['penerimaan'] = $this->m_transaksi->getByIdPenerimaan($where, 'tbl_penerimaan')->result();
-		$this->template->load('layout/template','adidas/penerimaan/detail.php', $data);
 	}
 
 	public function index_kualitas()

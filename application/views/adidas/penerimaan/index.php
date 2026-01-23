@@ -149,7 +149,7 @@ float:right;
                                             <td>
                                               <a href="<?=site_url('c_transaksi/detail_penerimaan/').$u->id_penerimaan?>" class="btn btn-outline-success btn-sm"><i class="fa fa-eye"></i></a>
                                               <a href="<?=site_url('c_transaksi/edit_penerimaan/').$u->id_penerimaan?>" class="btn btn-outline-info btn-sm button2"><i class="fa fa-edit"></i></a>
-                                              <a href="<?=site_url('')?>" onclick="return confirm('Apakah Anda Yakin Ingin Menghapus <?php echo $u->order_number ?>');" class="btn btn-outline-danger btn-sm remove"><i class="fa fa-trash"></i></a>
+                                              <a href="<?= site_url('c_transaksi/hapus_penerimaan/' . $u->id_penerimaan) ?>" onclick="return confirm('Yakin hapus? <?php echo $u->report_no ?>')" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>
                                             </td>
                                         </tr>
                                       <?php } ?>

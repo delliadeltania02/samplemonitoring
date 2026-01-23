@@ -3,6 +3,11 @@
 class M_transaksi extends CI_Model
 {
 
+    public function getKualitasById($id_kualitas)
+    {
+        $this->db->where('id_kualitas', $id_kualitas);
+        return $this->db->get('tbl_kualitas')->row(); // hanya ambil satu baris
+    }
 
     public function getByIdPenerimaan($where, $table)
     {

@@ -45,10 +45,10 @@ class Auth extends Ci_Controller
 			}
 		} else {
 			$this->session->set_flashdata('error', 'Username atau password salah!');
-			redirect('page/login'); // atau halaman login biasa
+			//redirect('page/login'); // atau halaman login biasa
+			redirect('Welcome/login_adidas'); // atau halaman login biasa
 		}
 	}
-
 
 	public function login_other()
 	{

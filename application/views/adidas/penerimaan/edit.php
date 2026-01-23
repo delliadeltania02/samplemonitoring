@@ -707,9 +707,9 @@ float:right;
                                             </div>
                                             <div class=" ">
                                             <label>30.</label>
-                                                <input type="checkbox" name="test_required[]" id="fiber" value="Fiber/Fuzz"
-                                                <?= in_array("Fiber/Fuzz", $selected) ? 'checked' :'' ?>>
-                                                <label for="fiber">Fiber/Fuzz</label>
+                                                <input type="checkbox" name="test_required[]" id="fiber" value="Fibre/Fuzz"
+                                                <?= in_array("Fibre/Fuzz", $selected) ? 'checked' :'' ?>>
+                                                <label for="fiber">Fibre/Fuzz</label>
                                             </div>
                                             <div class=" ">
                                             <label>31.</label>

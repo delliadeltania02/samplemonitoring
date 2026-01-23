@@ -143,7 +143,9 @@ float:right;
                                                     "Azo Dyes" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
                                                     "AP" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
                                                     "APEO" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Phtalates" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}"
+                                                    "Phtalates" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
+                                                    "Snagging (Snag Pod)" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
+                                                    "Bursting Pnematic" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}"
                                                 ];
 
                                                 // Check if the test_required exists in the map
@@ -155,8 +157,7 @@ float:right;
                                           
                                             </td>
                                             <td>
-                                              <a href="<?=site_url('c_transaksi/detail_kualitas/').$u->id_kualitas?>" class="btn btn-outline-success btn-sm"><i class="fa fa-eye"></i></a>
-                                              <a href="<?=site_url('c_transaksi/edit_kualitas/').$u->id_kualitas?>" class="btn btn-outline-info btn-sm button2"><i class="fa fa-edit"></i></a>
+                                              <a href="<?= site_url('c_transaksi/detail_kualitas/' . $u->id_penerimaan . '/' . $u->id_kualitas) ?>" class="btn btn-outline-success btn-sm"><i class="fa fa-eye"></i></a>
                                               <a href="<?=site_url('c_transaksi/hapus_kualitas/').$u->id_kualitas?>" onclick="return confirm('Apakah Anda Yakin Ingin Menghapus <?php echo $u->test_required ?>');" class="btn btn-outline-danger btn-sm remove"><i class="fa fa-trash"></i></a>
                                             </td>
                                         </tr>

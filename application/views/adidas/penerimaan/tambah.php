@@ -612,8 +612,8 @@ float:right;
                                             </div>
                                             <div class=" ">
                                             <label>30.</label>
-                                                <input type="checkbox" name="test_required[]" id="fiber" value="Fiber/Fuzz">
-                                                <label for="fiber">Fiber/Fuzz</label>
+                                                <input type="checkbox" name="test_required[]" id="fiber" value="Fibre/Fuzz">
+                                                <label for="fiber">Fibre/Fuzz</label>
                                             </div>
                                             <div class=" ">
                                             <label>31.</label>
