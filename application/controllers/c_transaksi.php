@@ -1,27 +1,830 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-use Dompdf\Dompdf;
-use Dompdf\Options;
+    use PhpOffice\PhpSpreadsheet\Spreadsheet;
+    use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+    use PhpOffice\PhpSpreadsheet\Style\Alignment;
+    use PhpOffice\PhpSpreadsheet\Chart\Chart;
+    use PhpOffice\PhpSpreadsheet\Chart\DataSeries;
+    use PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues;
+    use PhpOffice\PhpSpreadsheet\Chart\Legend;
+    use PhpOffice\PhpSpreadsheet\Chart\PlotArea;
+    use PhpOffice\PhpSpreadsheet\Chart\Title;
+	use PhpOffice\PhpSpreadsheet\Chart\DataLabels;
+	use Dompdf\Dompdf;
+	use Dompdf\Options;
 
 class c_transaksi extends CI_Controller {
+public function __construct()
+{
+    parent::__construct();
 
-	public function __construct()
+		// Method report yang BOLEH diakses tanpa login
+		$public_methods = [
+			'fgwt', 
+			'fgt',
+			'ftr',
+			'ttr1',
+			'ttr2',
+			'report_finalhandling',
+			'getHistoryNo',
+			'getHistoryAll'
+		];
+
+		// Ambil nama method yang sedang diakses
+		$current_method = $this->router->fetch_method();
+
+		// Jika method TIDAK ADA di public_methods → wajib login
+		if (!in_array($current_method, $public_methods)) {
+			if (!$this->session->userdata('logincek')) {
+				redirect('auth/login');
+				exit;
+			}
+		}
+
+		// Load library & model
+		$this->load->library('form_validation');
+		$this->load->helper(['url','form']);
+		$this->load->model(['m_login','m_transaksi']);
+		$this->load->library('upload');
+	}
+
+	public function proses_kualitas()
 	{
-		parent::__construct();
+		$id_penerimaan = $this->input->post('id_penerimaan');
+		$tests         = (array) $this->input->post('test_required');
+		$report_no     = $this->input->post('report_no');
 
-		 if (!$this->session->userdata('logincek')) {
-            redirect('auth/login');
+		// -------------------------------------------------
+		// Validasi
+		// -------------------------------------------------
+		if (empty($id_penerimaan) || empty($report_no)) {
+			$this->session->set_flashdata('error', 'Data penerimaan tidak valid');
+			redirect('c_transaksi/index_kualitas');
+			return;
+		}
+
+		if (empty($tests)) {
+			$this->session->set_flashdata('error', 'Pilih minimal 1 test');
+			redirect('c_transaksi/index_kualitas');
+			return;
+		}
+
+		$this->db->trans_start();
+
+		// -------------------------------------------------
+		// Ambil kualitas yang VALID
+		// -------------------------------------------------
+		$kualitas = $this->db
+			->select('id_kualitas')
+			->where('id_penerimaan', $id_penerimaan)
+			->where_in('test_required', $tests)
+			->where_in('status', ['belum', 'kembali'])
+			->get('tbl_kualitas')
+			->result_array();
+
+		if (empty($kualitas)) {
+			$this->db->trans_rollback();
+			$this->session->set_flashdata('error', 'Tidak ada test yang bisa diproses');
+			redirect('c_transaksi/index_kualitas');
+			return;
+		}
+
+		$id_kualitas_array = array_column($kualitas, 'id_kualitas');
+
+		// -------------------------------------------------
+		// UPDATE STATUS (INTI SOLUSI)
+		// -------------------------------------------------
+		$this->db
+			->where_in('id_kualitas', $id_kualitas_array)
+			->update('tbl_kualitas', [
+				'status'    => 'proses',
+				'report_no' => $report_no
+			]);
+
+		// Pastikan UPDATE kena
+		if ($this->db->affected_rows() === 0) {
+			$this->db->trans_rollback();
+			$this->session->set_flashdata('error', 'Gagal update status kualitas');
+			redirect('c_transaksi/index_kualitas');
+			return;
+		}
+
+		$this->db->trans_complete();
+
+		// -------------------------------------------------
+		// Simpan ke session utk navigasi test
+		// -------------------------------------------------
+		$this->session->set_userdata('id_kualitas_array', $id_kualitas_array);
+
+		// -------------------------------------------------
+		// Buka test pertama
+		// -------------------------------------------------
+		$first_id = reset($id_kualitas_array);
+
+		redirect(
+			'c_transaksi/index_testResult/' .
+			$report_no . '/' .
+			$first_id . '/' .
+			$id_penerimaan
+		);
+	}
+
+
+	public function get_test_required_dropdown()
+	{
+		$id_penerimaan = $this->input->post('id_penerimaan');
+		$report_no = $this->input->post('report_no');
+
+		$data = $this->m_transaksi
+					->getTestRequiredDropdown($id_penerimaan, $report_no);
+
+		echo json_encode($data);
+	}
+
+	public function get_order_detail($id_order)
+	{
+		$order = $this->m_transaksi->orderById(['id_order' => $id_order]);
+		echo json_encode($order);
+	}
+	
+	public function edit_order($id_order)
+	{
+		$where = ['id_order' => $id_order];
+		$data['detail'] = $this->m_transaksi->orderById($where); // harus berupa object
+		$this->template->load('layout/template', 'adidas/order/edit.php', $data);
+	}
+
+		public function detail_order($id_order)
+		{
+			$where = ['id_order' => $id_order];
+			$data['detail'] = $this->m_transaksi->orderById($where); // harus berupa object
+			$this->template->load('layout/template', 'adidas/order/detail.php', $data);
+		}
+
+
+
+	public function tambahaksi_order()
+    {
+		$data = array (
+			'order_number' => $this->input->post('order_number'),
+			'costumer_code' => $this->input->post('costumer_code'),
+			'costumer_name' => $this->input->post('costumer_name'),
+			'article_no' => $this->input->post('article_no'),
+			'color' => $this->input->post('color'),
+			'age' => $this->input->post('age'),
+			'working_number' => $this->input->post('working_number'),
+			'item_name' => $this->input->post('item_name'),
+			'exception' => $this->input->post('exception'),
+			'functional' => $this->input->post('functional'),
+			'hangtag' => $this->input->post('hangtag'),
+			'style' => $this->input->post('style'),
+			'podd' => $this->input->post('podd'),
+			'lco' => $this->input->post('lco'),
+			'po_quantity' =>  $this->input->post('po_quantity'),
+			'production_date' => $this->input->post('production_date'),
+			'season' => $this->input->post('season'),
+			'size' => $this->input->post('size'),
+			'line' => $this->input->post('line'),
+			'factory_discleamer' => $this->input->post('factory_discleamer'),
+			'brand' => $this->input->post('brand')	
+		);
+
+		$this->m_transaksi->input_order($data, 'tbl_order');
+
+		redirect('c_transaksi/index_order');
+    }
+
+	public function tambah_order()
+	{
+		 $this->template->load('layout/template', 'adidas/order/tambah.php');
+	}
+
+public function import_order()
+{
+    ini_set('memory_limit', '4096M');
+    set_time_limit(0);
+
+    if (empty($_FILES['file']['name'])) {
+        $this->session->set_flashdata('error', 'File belum dipilih.');
+        redirect('c_transaksi/import');
+    }
+
+    $this->load->library('Spreadsheet_Lib');
+    $path = $_FILES["file"]["tmp_name"];
+
+    // LOAD EXCEL READ ONLY
+    $spreadsheet = $this->spreadsheet_lib->loadReadOnly($path);
+    $sheet       = $spreadsheet->getActiveSheet();
+    $highestRow  = $sheet->getHighestDataRow();
+
+    /* ==============================
+       AMBIL ORDER_NUMBER YANG SUDAH ADA
+    ============================== */
+    $existing = $this->db
+        ->select('order_number')
+        ->where("order_number IS NOT NULL AND order_number <> ''")
+        ->get('tbl_order')
+        ->result_array();
+
+    $existingOrders = array_flip(array_column($existing, 'order_number'));
+
+    $insertBatch = [];
+    $updateBatch = [];
+    $batchSize   = 500;
+
+    for ($row = 2; $row <= $highestRow; $row++) {
+
+        $r = $sheet->rangeToArray(
+            "A{$row}:W{$row}",
+            null,
+            true,
+            false
+        )[0];
+
+        $orderNumber = trim((string) $r[0]);
+
+        // DATA DARI EXCEL
+        $data = [
+            'order_number'       => $orderNumber ?: null,
+            'costumer_code'      => $r[1],
+            'costumer_name'      => $r[2],
+            'article_no'         => $r[3],
+            'color'              => $r[4],
+            'age'                => $r[5],
+            'working_number'     => $r[6],
+            'item_name'          => $r[7],
+            'exception'          => $r[8],
+            'functional'         => $r[9],
+            'hangtag'            => $r[10],
+            'style'              => $r[11],
+            'podd'               => $this->spreadsheet_lib->excelDate($r[12]),
+            'lco'                => $this->spreadsheet_lib->excelDate($r[13]),
+            'po_quantity'        => $r[14],
+            'production_date'    => $this->spreadsheet_lib->excelDate($r[15]),
+            'season'             => $r[16],
+            'size'               => $r[17],
+            'line'               => $r[18],
+            'factory_discleamer' => $r[19],
+            'brand'              => $r[20],
+            'type_order'         => $r[22],
+        ];
+
+        /* ==============================
+           CASE LOGIC
+        ============================== */
+
+        // 1️⃣ ORDER NUMBER KOSONG → INSERT
+        if ($orderNumber === '') {
+
+            $data['created_at'] = date('Y-m-d H:i:s');
+            $insertBatch[] = $data;
+
+        }
+        // 2️⃣ ORDER NUMBER ADA
+        else {
+
+            // SUDAH ADA → UPDATE SEMUA FIELD
+            if (isset($existingOrders[$orderNumber])) {
+
+                $dataUpdate = $data;
+                unset($dataUpdate['order_number']);
+                $dataUpdate['updated_at'] = date('Y-m-d H:i:s');
+                $dataUpdate['order_number'] = $orderNumber;
+
+                $updateBatch[] = $dataUpdate;
+
+            }
+            // BELUM ADA → INSERT
+            else {
+
+                $data['created_at'] = date('Y-m-d H:i:s');
+                $insertBatch[] = $data;
+
+            }
         }
 
-		$this->load->library('form_validation');
-        $this->load->helper(array('url','form'));
-		$this->load->model('m_login');
-		$this->load->model('m_transaksi');
-		$this->load->library('upload');
+        // EXECUTE PER CHUNK
+        if (count($insertBatch) >= $batchSize) {
+            $this->db->insert_batch('tbl_order', $insertBatch);
+            $insertBatch = [];
+        }
 
-		
+        if (count($updateBatch) >= $batchSize) {
+            $this->db->update_batch('tbl_order', $updateBatch, 'order_number');
+            $updateBatch = [];
+        }
+    }
+
+    // FLUSH SISA DATA
+    if (!empty($insertBatch)) {
+        $this->db->insert_batch('tbl_order', $insertBatch);
+    }
+
+    if (!empty($updateBatch)) {
+        $this->db->update_batch('tbl_order', $updateBatch, 'order_number');
+    }
+
+    unset($spreadsheet);
+
+    $this->session->set_flashdata('success', 'Data order berhasil diimport.');
+    redirect('c_transaksi/index_order');
+}
+
+
+	public function import()
+    {
+        $this->template->load('layout/template', 'adidas/order/import.php');
+    }
+
+	public function get_order_ajax()
+	{
+		header('Content-Type: application/json');
+
+		$limit  = $this->input->get('length');
+		$start  = $this->input->get('start');
+		$search = $this->input->get('search')['value'] ?? '';
+
+		$data  = $this->m_transaksi->get_order_data($limit, $start, $search);
+		$total = $this->m_transaksi->count_order_data($search);
+
+		$result = [];
+		foreach ($data as $row) {
+			$result[] = [
+				'id_order' => $row->id_order,
+				'order_number'   => $row->order_number,
+				'costumer_code' => $row->costumer_code,
+				'costumer_name' => $row->costumer_name,
+				'article_no' => $row->article_no,
+				'color' => $row->color,
+				'age' => $row->age,
+				'working_number' => $row->working_number,
+				'item_name' => $row->item_name,
+				'exception' => $row->exception,
+				'functional' => $row->functional,
+				'hangtag' => $row->hangtag,
+				'style' => $row->style,
+				'podd' => $row->podd,
+				'lco' => $row->lco,
+				'po_quantity' => $row->po_quantity,
+				'production_date' => $row->production_date,
+				'season' => $row->season,
+				'size' => $row->size,
+				'line' => $row->line,
+				'factory_discleamer' => $row->factory_discleamer,
+				'brand' => $row->brand
+				
+			];
+		}
+
+		echo json_encode([
+			'draw'            => intval($this->input->get('draw')),
+			'recordsTotal'    => $total,
+			'recordsFiltered' => $total,
+			'data'            => $result
+		]);
 	}
+
+
+
+	public function index_order()
+	{
+		//$data['orders'] = $this->m_transaksi->get_all_order();
+		$this->template->load('layout/template', 'adidas/order/index.php');
+	}
+
+	public function release_action_ajax()
+	{
+		$id_penerimaan = $this->input->post('id_penerimaan');
+		$report_no = $this->input->post('report_no');
+		$date_sending = $this->input->post('date_sending');
+
+		// Contoh: update ke tabel penerimaan
+		$this->db->where('id_penerimaan', $id_penerimaan);
+		$this->db->update('tbl_penerimaan', [
+			'date_sending' => $date_sending,
+			'status' => 'Released'
+		]);
+
+		if ($this->db->affected_rows() > 0) {
+			echo json_encode(['status' => 'success']);
+		} else {
+			echo json_encode(['status' => 'error']);
+		}
+	}
+
+	public function rekap_per_bulan_excel()
+	{
+		$this->load->model('M_transaksi');
+		$data = $this->M_transaksi->get_rekap_per_bulan();
+
+		$spreadsheet = new PhpOffice\PhpSpreadsheet\Spreadsheet();
+
+		$bulanList = [
+			'01' => 'Januari', '02' => 'Februari', '03' => 'Maret',
+			'04' => 'April', '05' => 'Mei', '06' => 'Juni',
+			'07' => 'Juli', '08' => 'Agustus', '09' => 'September',
+			'10' => 'Oktober', '11' => 'November', '12' => 'Desember'
+		];
+
+		$sheetIndex = 0;
+
+		foreach ($bulanList as $bln => $namaBulan) {
+			$filtered = array_filter($data, function($row) use ($bln) {
+				return date('Y', strtotime($row->date_test)) >= 2025 &&
+					date('m', strtotime($row->date_test)) == $bln;
+			});
+
+			if (empty($filtered)) continue;
+
+			$sheet = $sheetIndex == 0 ? 
+				$spreadsheet->getActiveSheet() : 
+				$spreadsheet->createSheet($sheetIndex);
+			$sheet->setTitle($namaBulan . ' 2025');
+
+			// === Ambil buyer & test unik ===
+			$buyers = array_unique(array_column($filtered, 'buyer'));
+			sort($buyers);
+			$testList = array_unique(array_column($filtered, 'test_required'));
+			sort($testList);
+
+			$buyerCount = count($buyers);
+
+			// === Header ===
+			$sheet->setCellValue('A1', 'NO');
+			$sheet->setCellValue('B1', 'TEST REQUIRED');
+			$sheet->mergeCells('A1:A2');
+			$sheet->mergeCells('B1:B2');
+
+			$firstBuyerCol = 'C';
+			$lastBuyerCol = chr(ord('C') + $buyerCount - 1);
+			$sheet->mergeCells($firstBuyerCol . '1:' . $lastBuyerCol . '1');
+			$sheet->setCellValue($firstBuyerCol . '1', 'BUYER');
+
+			$col = 'C';
+			foreach ($buyers as $buyer) {
+				$sheet->setCellValue($col . '2', strtoupper($buyer));
+				$col++;
+			}
+
+			// Tambahkan kolom TOTAL & %
+			$sheet->setCellValue($col . '1', 'TOTAL');
+			$sheet->mergeCells($col . '1:' . $col . '2');
+			$colPersen = chr(ord($col) + 1);
+			$sheet->setCellValue($colPersen . '1', '%');
+			$sheet->mergeCells($colPersen . '1:' . $colPersen . '2');
+			$lastBuyerCol = $colPersen;
+
+			// Style header
+			$sheet->getStyle('A1:' . $lastBuyerCol . '2')->getFont()->setBold(true);
+			$sheet->getStyle('A1:' . $lastBuyerCol . '2')->getAlignment()
+				->setHorizontal('center')->setVertical('center');
+			$sheet->getStyle('A1:' . $lastBuyerCol . '2')->getBorders()->getAllBorders()
+				->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+			// === Isi data ===
+			$rowNum = 3;
+			$no = 1;
+			$chartData = [];
+
+			foreach ($testList as $test) {
+				$sheet->setCellValue('A' . $rowNum, $no++);
+				$sheet->setCellValue('B' . $rowNum, $test);
+
+				$col = 'C';
+				$totalPerTest = 0;
+
+				foreach ($buyers as $buyer) {
+					$count = count(array_filter($filtered, function ($r) use ($test, $buyer) {
+						return $r->test_required == $test && $r->buyer == $buyer;
+					}));
+					$sheet->setCellValue($col . $rowNum, $count > 0 ? $count : 0);
+					$totalPerTest += $count;
+					$col++;
+				}
+
+				// total per test
+				$sheet->setCellValue($col . $rowNum, $totalPerTest);
+				$chartData[] = ['test' => $test, 'total' => $totalPerTest];
+
+				$rowNum++;
+			}
+
+			// === Baris total per buyer ===
+			$sheet->setCellValue('A' . $rowNum, 'TOTAL');
+			$sheet->mergeCells('A' . $rowNum . ':B' . $rowNum);
+			$grandTotal = 0;
+
+			$col = 'C';
+			foreach ($buyers as $buyer) {
+				$totalBuyer = 0;
+				foreach ($testList as $test) {
+					$count = count(array_filter($filtered, function ($r) use ($test, $buyer) {
+						return $r->test_required == $test && $r->buyer == $buyer;
+					}));
+					$totalBuyer += $count;
+				}
+				$sheet->setCellValue($col . $rowNum, $totalBuyer);
+				$grandTotal += $totalBuyer;
+				$col++;
+			}
+			$sheet->setCellValue($col . $rowNum, $grandTotal);
+
+			// === Hitung & isi kolom persentase ===
+			foreach ($chartData as $i => $cd) {
+				$rowPersen = 3 + $i;
+				$percent = $grandTotal > 0 ? ($cd['total'] / $grandTotal) * 100 : 0;
+				$sheet->setCellValue($colPersen . $rowPersen, round($percent, 2) . '%');
+			}
+
+			// Style tabel
+			$sheet->getStyle('A1:' . $lastBuyerCol . $rowNum)->getBorders()->getAllBorders()
+				->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+			// Auto width
+			foreach (range('A', $lastBuyerCol) as $col) {
+				$sheet->getColumnDimension($col)->setAutoSize(true);
+			}
+
+		// === Chart di bawah tabel ===
+		$chartStartRow = $rowNum + 2;
+		$dataStart = 3;
+		$dataEnd = $rowNum - 1;
+		$labelCol = 'B';
+		$valueCol = chr(ord($lastBuyerCol) - 1); // kolom TOTAL
+		$percentCol = $lastBuyerCol; // kolom %
+
+		$dataSeriesLabels = [
+			new \PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues('String', "'".$sheet->getTitle()."'!$valueCol$2", null, 1),
+		];
+		$xAxisTickValues = [
+			new \PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues('String', "'".$sheet->getTitle()."'!$labelCol$dataStart:$labelCol$dataEnd", null, count($chartData)),
+		];
+		$dataSeriesValues = [
+			new \PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues('Number', "'".$sheet->getTitle()."'!$valueCol$dataStart:$valueCol$dataEnd", null, count($chartData)),
+		];
+
+		// === Gantikan DataLabels (versi lama tidak support) ===
+		$series = new \PhpOffice\PhpSpreadsheet\Chart\DataSeries(
+			\PhpOffice\PhpSpreadsheet\Chart\DataSeries::TYPE_BARCHART,
+			\PhpOffice\PhpSpreadsheet\Chart\DataSeries::GROUPING_CLUSTERED,
+			range(0, count($dataSeriesValues) - 1),
+			$dataSeriesLabels,
+			$xAxisTickValues,
+			$dataSeriesValues
+		);
+		$series->setPlotDirection(\PhpOffice\PhpSpreadsheet\Chart\DataSeries::DIRECTION_COL);
+
+		$plotArea = new \PhpOffice\PhpSpreadsheet\Chart\PlotArea(null, [$series]);
+		$chartTitle = new \PhpOffice\PhpSpreadsheet\Chart\Title('Persentase Pengujian - ' . $namaBulan . ' 2025');
+
+		$chart = new \PhpOffice\PhpSpreadsheet\Chart\Chart(
+			'chart1',
+			$chartTitle,
+			null,
+			$plotArea
+		);
+
+		$chart->setTopLeftPosition('B' . ($rowNum + 2));
+		$chart->setBottomRightPosition('L' . ($rowNum + 20));
+		$sheet->addChart($chart);
+
+				$sheetIndex++;
+			}
+
+			$spreadsheet->setActiveSheetIndex(0);
+
+			$filename = 'Rekapan_Pengujian_Per_Bulan.xlsx';
+			header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+			header('Content-Disposition: attachment;filename="' . $filename . '"');
+			header('Cache-Control: max-age=0');
+
+			$writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+			$writer->setIncludeCharts(true);
+			$writer->save('php://output');
+	}
+
+
+public function dashboard_excel()
+{
+    $data['total'] = $this->m_transaksi->get_summary_by_buyer();
+
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Summary');
+
+    // === HEADER FORM ===
+    $sheet->mergeCells('B1:F1');
+    $sheet->setCellValue('B1', 'FORMULIR / FORM');
+    $sheet->getStyle('B1')->getFont()->setBold(true)->setSize(14);
+    $sheet->getStyle('B1')->getAlignment()->setHorizontal('center');
+
+    $sheet->mergeCells('B2:F2');
+    $sheet->setCellValue('B2', 'DEPARTEMEN LABORAT / LABORATORY DEPARTMENT');
+    $sheet->getStyle('B2')->getAlignment()->setHorizontal('center');
+
+    $sheet->mergeCells('B3:F3');
+    $sheet->setCellValue('B3', 'REKAPAN PENERIMAAN SAMPLE / SAMPLE RECEIPT SUMMARY');
+    $sheet->getStyle('B3')->getFont()->setBold(true);
+	$sheet->getStyle('B3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+	//$sheet->getStyle('B4')->getAlignment()->setHorizontal('center')->getFont()->setBold(true);
+
+    $sheet->setCellValue('B6', 'BULAN / MONTH : ' . strtoupper(date('F Y')));
+
+    // === HEADER TABEL ===
+    $headerRow = 8;
+    $sheet->setCellValue('B' . $headerRow, 'NO');
+    $sheet->setCellValue('C' . $headerRow, 'BUYER');
+    $sheet->setCellValue('D' . $headerRow, 'SAMPEL DI TERIMA / SAMPLE RECEIVED');
+    $sheet->setCellValue('E' . $headerRow, 'SAMPEL SELESAI SESUAI TIMELINE / SAMPLE COMPLETED AS PER TIMELINE');
+    $sheet->setCellValue('F' . $headerRow, 'SAMPEL SELESAI MELEBIHI TIMELINE / SAMPLE COMPLETED BEYOND THE TIMELINE');
+
+    $sheet->getStyle("B{$headerRow}:F{$headerRow}")->applyFromArray([
+        'font' => ['bold' => true, 'color' => ['rgb' => '000000']],
+        'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
+        'fill' => [
+            'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+            'startColor' => ['rgb' => 'CFE2F3']
+        ],
+        'borders' => [
+            'allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]
+        ]
+    ]);
+
+    // === ISI DATA ===
+    $row = $headerRow + 1;
+    $no = 1;
+    $total_sample = 0;
+    $total_sesuai = 0;
+    $total_melebihi = 0;
+
+    foreach ($data['total'] as $d) {
+        $sheet->setCellValue("B{$row}", $no++);
+        $sheet->setCellValue("C{$row}", $d->buyer);
+        $sheet->setCellValue("D{$row}", $d->total_sample);
+        $sheet->setCellValue("E{$row}", $d->sesuai_timeline);
+        $sheet->setCellValue("F{$row}", $d->melebihi_timeline);
+
+        $sheet->getStyle("B{$row}:F{$row}")->applyFromArray([
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => 'center', 'vertical' => 'center']
+        ]);
+
+        $total_sample += $d->total_sample;
+        $total_sesuai += $d->sesuai_timeline;
+        $total_melebihi += $d->melebihi_timeline;
+
+        $row++;
+    }
+
+    // === GRAND TOTAL ===
+    $sheet->setCellValue("C{$row}", 'GRAND TOTAL');
+    $sheet->setCellValue("D{$row}", $total_sample);
+    $sheet->setCellValue("E{$row}", $total_sesuai);
+    $sheet->setCellValue("F{$row}", $total_melebihi);
+    $sheet->getStyle("B{$row}:F{$row}")->applyFromArray([
+        'font' => ['bold' => true],
+        'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
+        'fill' => [
+            'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+            'startColor' => ['rgb' => 'D9EAD3']
+        ]
+    ]);
+
+    // === PERSENTASE ===
+    $row++;
+    $sheet->setCellValue("C{$row}", 'PERSENTASE / PERCENTAGE');
+    $sheet->setCellValue("D{$row}", '100%');
+    $sheet->setCellValue("E{$row}", $total_sample ? round(($total_sesuai / $total_sample) * 100, 2) . '%' : '0%');
+    $sheet->setCellValue("F{$row}", $total_sample ? round(($total_melebihi / $total_sample) * 100, 2) . '%' : '0%');
+    $sheet->getStyle("B{$row}:F{$row}")->applyFromArray([
+        'font' => ['bold' => true, 'color' => ['rgb' => '0B5394']],
+        'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]]
+    ]);
+
+    // Auto width
+    foreach (range('B', 'F') as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+
+    // === SHEET 2: PIE CHART ===
+    $chartSheet = $spreadsheet->createSheet();
+    $chartSheet->setTitle('Chart');
+
+    $chartSheet->setCellValue('B2', 'PERSENTASE SAMPEL YANG DITERIMA / PERCENTAGE OF SAMPLES RECEIVED');
+    $chartSheet->mergeCells('B2:F2');
+    $chartSheet->getStyle('B2')->getFont()->setBold(true)->setSize(12);
+    $chartSheet->getStyle('B2')->getAlignment()->setHorizontal('center');
+
+    // Masukkan data untuk chart
+    $chartRow = 4;
+    $chartSheet->setCellValue("B{$chartRow}", 'Buyer');
+    $chartSheet->setCellValue("C{$chartRow}", 'Total Sample');
+    $chartRow++;
+    foreach ($data['total'] as $d) {
+        $chartSheet->setCellValue("B{$chartRow}", $d->buyer);
+        $chartSheet->setCellValue("C{$chartRow}", $d->total_sample);
+        $chartRow++;
+    }
+
+    // Buat pie chart
+    $dataSeriesLabels = [new \PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues('String', 'Chart!$C$4', null, 1)];
+    $xAxisTickValues = [new \PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues('String', 'Chart!$B$5:$B$' . ($chartRow - 1), null, 4)];
+    $dataSeriesValues = [new \PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues('Number', 'Chart!$C$5:$C$' . ($chartRow - 1), null, 4)];
+
+    $series = new \PhpOffice\PhpSpreadsheet\Chart\DataSeries(
+        \PhpOffice\PhpSpreadsheet\Chart\DataSeries::TYPE_PIECHART,
+        null,
+        range(0, count($dataSeriesValues) - 1),
+        $dataSeriesLabels,
+        $xAxisTickValues,
+        $dataSeriesValues
+    );
+
+    $layout = new \PhpOffice\PhpSpreadsheet\Chart\Layout();
+    $layout->setShowPercent(true);
+
+    $plotArea = new \PhpOffice\PhpSpreadsheet\Chart\PlotArea($layout, [$series]);
+    $chartTitle = new \PhpOffice\PhpSpreadsheet\Chart\Title('Percentage of Samples Received');
+    $chart = new \PhpOffice\PhpSpreadsheet\Chart\Chart(
+        'chart1',
+        $chartTitle,
+        null,
+        $plotArea
+    );
+
+    $chart->setTopLeftPosition('E6');
+    $chart->setBottomRightPosition('M25');
+    $chartSheet->addChart($chart);
+
+    // === EXPORT ===
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="REKAPAN PENERIMAAN SAMPLE.xlsx"');
+    header('Cache-Control: max-age=0');
+
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->setIncludeCharts(true);
+    $writer->save('php://output');
+    exit;
+}
+
+
+	public function d_sampleterima()
+	{
+		//$data['detail'] = $this->m_transaksi->getDetailSesuaiTimeline();
+		$data['detail'] = $this->m_transaksi->get_detail_semua_timeline();
+		$this->template->load('layout/template','adidas/d_sampleterima', $data);
+	}
+
+	public function d_melebihitimeline()
+	{
+		//$data['detail'] = $this->m_transaksi->getDetailSesuaiTimeline();
+		$data['detail'] = $this->m_transaksi->get_detail_melebihi_timeline();
+		$this->template->load('layout/template','adidas/d_melebihitimeline', $data);
+	}
+
+	
+	public function d_sesuaitimeline()
+	{
+		//$data['detail'] = $this->m_transaksi->getDetailSesuaiTimeline();
+		$data['detail'] = $this->m_transaksi->get_detail_sesuai_timeline();
+		$this->template->load('layout/template','adidas/d_sesuaitimeline', $data);
+	}
+
+	public function assign_index($id_penerimaan = null, $report_no = null)
+	{
+		if ($id_penerimaan && $report_no) {
+			// Mode edit: ambil data berdasarkan id_penerimaan dan report_no
+			$data['hasil'] = $this->m_transaksi->get_assign_by_id($id_penerimaan, $report_no);
+		} else {
+			// Mode normal: tampilkan semua data
+			$data['hasil'] = $this->m_transaksi->get_assign();
+		}
+
+	$this->template->load('layout/template', 'adidas/report/assign.php', $data);
+
+	}
+
+
+		public function kirim_ulang($id_kualitas, $id_penerimaan)
+		{
+			// Update status di tabel kualitas
+			$this->db->where('id_kualitas', $id_kualitas);
+			$this->db->where('id_penerimaan', $id_penerimaan);
+			$this->db->update('tbl_kualitas', ['status' => 'kembali']);
+
+			// Hapus date_final di report_handlingsample supaya dianggap belum selesai lagi
+			$this->db->where('id_penerimaan', $id_penerimaan);
+			$this->db->update('report_handlingsample', ['date_final' => NULL]);
+
+			// (opsional) Kalau ada status lain yang perlu di-reset
+			// $this->db->update('report_handlingsample', ['result_status' => NULL]);
+
+			$this->session->set_flashdata('success', 'Data berhasil dikirim ulang ke Kualitas.');
+			redirect('c_transaksi/index_report');
+		}
+
+
 
 	private function checkAndInsertFinalHandling($id_penerimaan, $report_no)
 	{
@@ -78,9 +881,6 @@ class c_transaksi extends CI_Controller {
 			$this->db->insert('report_finalhandling', $data);
 		}
 	}
-
-
-
 
 	public function index_supplier()
 	{
@@ -190,17 +990,20 @@ class c_transaksi extends CI_Controller {
 		public function index()
 		{
 
-			$penerimaan_per_bulan = $this->m_transaksi->getPenerimaanPerBulan();
-			$bulan = [];
+			$penerimaan_per_bulan = array_reverse($this->m_transaksi->getPenerimaanPerBulan());
+
+			$bulan  = [];
 			$jumlah = [];
 
 			foreach ($penerimaan_per_bulan as $row) {
-				$bulan[] = date('F Y', strtotime($row->bulan . '-01')); // ubah jadi format "Juni 2025"
-				$jumlah[] = $row->total;
+				if (empty($row->bulan) || $row->bulan === '0000-00') continue; // skip data rusak
+
+				$bulan[]  = date('F Y', strtotime($row->bulan . '-01'));
+				$jumlah[] = (int)$row->total;
 			}
 
-			$data['penerimaan_bulan_labels'] = $bulan;
-			$data['penerimaan_bulan_values'] = $jumlah;
+			$data['penerimaan_bulan_labels']  = $bulan;
+			$data['penerimaan_bulan_values']  = $jumlah;
 
 			$data['total_penerimaan'] = $this->m_transaksi->getTotalPenerimaan();
 			$data['penerimaan'] = $this->m_transaksi->getPenerimaan()->result();
@@ -289,25 +1092,31 @@ class c_transaksi extends CI_Controller {
 	}
 
 	public function tambah_penerimaan()
-	{
-		$this->load->model('m_transaksi');
-		$data['supplier'] = $this->m_transaksi->getSupplier()->result();
-		$data['user'] = $this->m_login->current_user();
-		$data['idPenerimaan'] = $this->m_transaksi->kodePenerimaan();
-		$data['idKualitas'] = $this->m_transaksi->kodeKualitas();
-		$data['department'] = $this->m_transaksi->getDepartment()->result();
-		$data['email'] = $this->m_transaksi->getEmail()->result();
-		$data['material'] = $this->m_transaksi->getMaterial()->result();
-		$data['oekotex'] = $this->m_transaksi->getOekotex()->result();
-		$data['stages'] = $this->m_transaksi->getStages()->result();
-		$data['size'] = $this->m_transaksi->getSizecategory()->result();
-		$data['washing'] = $this->m_transaksi->getCareWashing();
-		$data['bleching'] = $this->m_transaksi->getCareBleching();
-		$data['drying'] = $this->m_transaksi->getCareDrying();
-		$data['profess'] = $this->m_transaksi->getCareProfess();
-		$data['ironing'] = $this->m_transaksi->getCareIroning();
-		$this->template->load('layout/template','adidas/penerimaan/tambah.php', $data);
-	}
+{
+    $this->load->model('m_transaksi');
+    
+    $data['supplier'] = $this->m_transaksi->getSupplier()->result();
+    $data['user'] = $this->m_login->current_user();
+    $data['idPenerimaan'] = $this->m_transaksi->kodePenerimaan();
+    $data['idKualitas'] = $this->m_transaksi->kodeKualitas();
+    $data['department'] = $this->m_transaksi->getDepartment()->result();
+    $data['email'] = $this->m_transaksi->getEmail()->result();
+    $data['material'] = $this->m_transaksi->getMaterial()->result();
+    $data['oekotex'] = $this->m_transaksi->getOekotex()->result();
+    $data['stages'] = $this->m_transaksi->getStages()->result();
+    $data['size'] = $this->m_transaksi->getSizecategory()->result();
+    $data['washing'] = $this->m_transaksi->getCareWashing();
+    $data['bleching'] = $this->m_transaksi->getCareBleching();
+    $data['drying'] = $this->m_transaksi->getCareDrying();
+    $data['profess'] = $this->m_transaksi->getCareProfess();
+    $data['ironing'] = $this->m_transaksi->getCareIroning();
+ 	$data['producttype'] = $this->m_transaksi->tampil_producttype()->result();
+	$data['regulation'] = $this->m_transaksi->get_regulation()->result();
+    // Tambahkan data order untuk dropdown
+    $data['order'] = $this->m_transaksi->getAllOrders()->result();
+
+    $this->template->load('layout/template','adidas/penerimaan/tambah.php', $data);
+}
 	public function tambahaksi_penerimaan()
 	{
 		// Generate data untuk QR code
@@ -353,7 +1162,7 @@ class c_transaksi extends CI_Controller {
 		// Cek apakah file ada dan valid
 		if (isset($image_upload) && $image_upload['error'] == 0) {
 			$config = array(
-				'upload_path' => FCPATH . 'images/', // Path lengkap
+				'upload_path' => FCPATH . 'images/sample_photo', // Path lengkap
 				'allowed_types' => 'jpg|jpeg|png|gif', // Tipe file yang diperbolehkan
 				'max_size' => 5000, // Ukuran maksimal file dalam KB
 				'file_name' => time() . '_' . $image_upload['name'], // Nama file yang unik
@@ -391,6 +1200,7 @@ class c_transaksi extends CI_Controller {
 			'sample_description' => $this->input->post('sample_description'),
 			'batch_lot' => $this->input->post('batch_lot'),
 			'order_number' => $this->input->post('order_number'),
+			'other_order_number' => $this->input->post('other_order_number'),
 			'code_of_fabric' => $this->input->post('code_of_fabric'),
 			'initial_width' => $this->input->post('initial_width'),
 			'request_width' => $this->input->post('request_width'),
@@ -442,6 +1252,7 @@ class c_transaksi extends CI_Controller {
 		// Redirect ke halaman penerimaan
 		redirect('c_transaksi/index_penerimaan');
 	}
+	
 	public function editaksi_penerimaan()
 	{
 		$id_penerimaan = $this->input->post('id_penerimaan');
@@ -449,14 +1260,16 @@ class c_transaksi extends CI_Controller {
 		// Generate data QR code
 		$qrcode_data = $this->_generate_data_qrcode();
 
-		// Cek apakah ada upload gambar baru
+		/* ===============================
+		UPLOAD IMAGE
+		=============================== */
 		$image_upload = $_FILES['image_path'];
 		if (isset($image_upload) && $image_upload['error'] == 0) {
 			$config = array(
-				'upload_path' => FCPATH . 'images/',
+				'upload_path'   => FCPATH . 'images/sample_photo/',
 				'allowed_types' => 'jpg|jpeg|png|gif',
-				'max_size' => 5000,
-				'file_name' => time() . '_' . $image_upload['name'],
+				'max_size'      => 5000,
+				'file_name'     => time() . '_' . $image_upload['name'],
 			);
 			$this->load->library('upload');
 			$this->upload->initialize($config);
@@ -469,103 +1282,112 @@ class c_transaksi extends CI_Controller {
 				return;
 			}
 		} else {
-			// Jika tidak ada upload baru, ambil dari form atau set null
 			$image_path = $this->input->post('existing_image_path') ?? null;
 		}
 
-		// Data utama penerimaan yang akan diupdate
+		/* ===============================
+		UPDATE PENERIMAAN
+		=============================== */
 		$penerimaan = array(
-			'applicant' => $this->input->post('applicant'),
-			'department' => $this->input->post('department'),
-			'telephone' => $this->input->post('telephone'),
-			'email' => $this->input->post('email'),
-			'buyer' => $this->input->post('buyer'),
-			'datetime_received' => $this->input->post('datetime_received'),
-			'received_sample_by' => $this->input->post('received_sample_by'),
-			'sample_description' => $this->input->post('sample_description'),
-			'batch_lot' => $this->input->post('batch_lot'),
-			'order_number' => $this->input->post('order_number'),
-			'code_of_fabric' => $this->input->post('code_of_fabric'),
-			'initial_width' => $this->input->post('initial_width'),
-			'request_width' => $this->input->post('request_width'),
-			'finished_width' => $this->input->post('finished_width'),
-			'request_fabric' => $this->input->post('request_fabric'),
-			'finish_fabric' => $this->input->post('finish_fabric'),
-			'dyeing_number' => $this->input->post('dyeing_number'),
-			'production_number' => $this->input->post('production_number'),
-			'country_destination' => $this->input->post('country_destination'),
-			'product_end' => $this->input->post('product_end'),
-			'article_no' => $this->input->post('article_no'),
-			'item_no' => $this->input->post('item_no'),
-			'style_no' => $this->input->post('style_no'),
-			'season' => $this->input->post('season'),
-			'approved_date' => $this->input->post('approved_date'),
-			'supplier_name' => $this->input->post('supplier_name'),
-			'size' => $this->input->post('size'),
-			'brands' => $this->input->post('brands'),
-			'material_id' => $this->input->post('material_id'),
-			'temperature_process' => $this->input->post('temperature_process'),
-			'technique_print' => $this->input->post('technique_print'),
-			'country_origin' => $this->input->post('country_origin'),
-			'oekotex' => $this->input->post('oekotex'),
-			'number_sample' => $this->input->post('number_sample'),
-			'quantity_sample' => $this->input->post('quantity_sample'),
-			'tod' => $this->input->post('tod'),
-			'report_no' => $this->input->post('report_no'),
-			'color_of_name' => $this->input->post('color_of_name'),
-			'compotition' => $this->input->post('compotition'),
-			'stage' => $this->input->post('stage'),
-			'size_category' => $this->input->post('size_category'),
-			'sample_no' => $this->input->post('sample_no'),
-			'other_sampleno' => $this->input->post('other_sampleno'),
-			'washing' => $this->input->post('washing'),
-			'bleach' => $this->input->post('bleach'),
-			'drying' => $this->input->post('drying'),
-			'ironing' => $this->input->post('ironing'),
-			'profess' => $this->input->post('profess'),
-			'qrcode_path' => $this->_generate_qrcode($this->input->post('report_no'), $qrcode_data),
-			'qrcode_data' => $qrcode_data,
-			'image_path' => $image_path
+			'applicant'            => $this->input->post('applicant'),
+			'department'           => $this->input->post('department'),
+			'telephone'            => $this->input->post('telephone'),
+			'email'                => $this->input->post('email'),
+			'buyer'                => $this->input->post('buyer'),
+			'datetime_received'    => $this->input->post('datetime_received'),
+			'received_sample_by'   => $this->input->post('received_sample_by'),
+			'sample_description'   => $this->input->post('sample_description'),
+			'batch_lot'            => $this->input->post('batch_lot'),
+			'order_number'         => $this->input->post('order_number'),
+			'other_order_number'   => $this->input->post('other_order_number'),
+			'code_of_fabric'       => $this->input->post('code_of_fabric'),
+			'initial_width'        => $this->input->post('initial_width'),
+			'request_width'        => $this->input->post('request_width'),
+			'finished_width'       => $this->input->post('finished_width'),
+			'request_fabric'       => $this->input->post('request_fabric'),
+			'finish_fabric'        => $this->input->post('finish_fabric'),
+			'dyeing_number'        => $this->input->post('dyeing_number'),
+			'production_number'    => $this->input->post('production_number'),
+			'country_destination'  => $this->input->post('country_destination'),
+			'product_end'          => $this->input->post('product_end'),
+			'article_no'           => $this->input->post('article_no'),
+			'item_no'              => $this->input->post('item_no'),
+			'style_no'             => $this->input->post('style_no'),
+			'season'               => $this->input->post('season'),
+			'approved_date'        => $this->input->post('approved_date'),
+			'supplier_name'        => $this->input->post('supplier_name'),
+			'size'                 => $this->input->post('size'),
+			'brands'               => $this->input->post('brands'),
+			'material_id'          => $this->input->post('material_id'),
+			'temperature_process'  => $this->input->post('temperature_process'),
+			'technique_print'      => $this->input->post('technique_print'),
+			'country_origin'       => $this->input->post('country_origin'),
+			'oekotex'               => $this->input->post('oekotex'),
+			'number_sample'        => $this->input->post('number_sample'),
+			'quantity_sample'      => $this->input->post('quantity_sample'),
+			'tod'                  => $this->input->post('tod'),
+			'report_no'            => $this->input->post('report_no'),
+			'color_of_name'        => $this->input->post('color_of_name'),
+			'compotition'          => $this->input->post('compotition'),
+			'stage'                => $this->input->post('stage'),
+			'size_category'        => $this->input->post('size_category'),
+			'sample_no'            => $this->input->post('sample_no'),
+			'other_sampleno'       => $this->input->post('other_sampleno'),
+			'washing'              => $this->input->post('washing'),
+			'bleach'               => $this->input->post('bleach'),
+			'drying'               => $this->input->post('drying'),
+			'ironing'              => $this->input->post('ironing'),
+			'profess'              => $this->input->post('profess'),
+			'qrcode_path'          => $this->_generate_qrcode($this->input->post('report_no'), $qrcode_data),
+			'qrcode_data'          => $qrcode_data,
+			'image_path'           => $image_path
 		);
 
-		// Update data ke database
 		$this->m_transaksi->updatePenerimaan($id_penerimaan, $penerimaan);
 
-		// Optional: Update data kualitas jika diperlukan
-		$color = $this->input->post('color');
+		/* ===============================
+		TAMBAH KUALITAS (HANYA YANG BARU)
+		=============================== */
+		$color         = $this->input->post('color');
+		$color_of      = $this->input->post('color_of');
 		$test_required = $this->input->post('test_required');
-		$color_of = $this->input->post('color_of');	
 
 		if (is_array($test_required)) {
-			$test_required = array_filter($test_required, function($value) {
-				return !empty(trim($value));
-			});
-		}
+		$test_required = array_filter($test_required, function ($v) {
+			return trim($v) !== '';
+		});
+	}
 
-		if (is_array($color) && is_array($color_of) && is_array($test_required)) {
-		$this->m_transaksi->deleteKualitasByPenerimaan($id_penerimaan);
+		// ambil test yang sudah ada di kualitas
+		$existing_tests = $this->m_transaksi
+			->getTestRequiredByPenerimaan($id_penerimaan);
 
-		for ($i = 0; $i < count($color); $i++) {
-			$c = $color[$i] ?? '';
-			$co = $color_of[$i] ?? '';
+		// cari yang baru ditambahkan
+		$new_tests = array_diff($test_required, $existing_tests);
 
-			foreach ($test_required as $t) {
-				$this->m_transaksi->saveKualitas(
-					$t,
-					$c,
-					$co,
-					$this->input->post('id_kualitas'),
-					$this->input->post('color_of_name'),
-					$id_penerimaan,
-					$this->input->post('report_no')
-				);
+		// insert hanya yang baru
+		if (is_array($color) && is_array($color_of) && !empty($new_tests)) {
+			for ($i = 0; $i < count($color); $i++) {
+				$c  = $color[$i] ?? '';
+				$co = $color_of[$i] ?? '';
+
+				foreach ($new_tests as $t) {
+					$this->m_transaksi->saveKualitas(
+						$t,
+						$c,
+						$co,
+						$this->input->post('id_kualitas'),
+						$this->input->post('color_of_name'),
+						$id_penerimaan,
+						$this->input->post('report_no')
+					);
+				}
 			}
 		}
-	}
 
-		// Redirect
 		redirect('c_transaksi/index_penerimaan');
 	}
+
 	public function update_penerimaan()
 	{
 		$id = $this->input->post('id_penerimaan');
@@ -1055,44 +1877,44 @@ class c_transaksi extends CI_Controller {
 	}
 
 	public function detail_kualitas($id_penerimaan, $id_kualitas)
-{
-    $this->load->model('m_transaksi');
+	{
+		$this->load->model('m_transaksi');
 
-    // Ambil semua data kualitas berdasarkan id_penerimaan
-    $kualitas_data = $this->m_transaksi->getKualitasByPenerimaan($id_penerimaan);
+		// Ambil semua data kualitas berdasarkan id_penerimaan
+		$kualitas_data = $this->m_transaksi->getKualitasByPenerimaan($id_penerimaan);
 
-    // Ambil data kualitas spesifik berdasarkan id_kualitas
-    $kualitas_satu = $this->m_transaksi->getKualitasById($id_kualitas);
+		// Ambil data kualitas spesifik berdasarkan id_kualitas
+		$kualitas_satu = $this->m_transaksi->getKualitasById($id_kualitas);
 
-    if (!$kualitas_satu) {
-        show_404();
-    }
+		if (!$kualitas_satu) {
+			show_404();
+		}
 
-    // Ambil image dari data ini saja
-    $image_path = !empty($kualitas_satu->image_path) ? $kualitas_satu->image_path : '';
+		// Ambil image dari data ini saja
+		$image_path = !empty($kualitas_satu->image_path) ? $kualitas_satu->image_path : '';
 
-    $data['penerimaan'] = [
-        'data'          => $this->m_transaksi->getByIdPenerimaan(['id_penerimaan' => $id_penerimaan], 'tbl_penerimaan')->row(),
-        'kualitas'      => $kualitas_data, // list semua kualitas di penerimaan ini
-        'kualitas_satu' => $kualitas_satu, // hanya 1 untuk detail tampilan
-        'email'         => $this->m_transaksi->getEmail()->result(),
-        'material'      => $this->m_transaksi->getMaterial()->result(),
-        'supplier'      => $this->m_transaksi->getSupplier()->result(),
-        'oekotex'       => $this->m_transaksi->getOekotex()->result(),
-        'stages'        => $this->m_transaksi->getStages()->result(),
-        'size'          => $this->m_transaksi->getSizecategory()->result(),
-        'washing'       => $this->m_transaksi->getCareWashing(),
-        'bleching'      => $this->m_transaksi->getCareBleching(),
-        'drying'        => $this->m_transaksi->getCareDrying(),
-        'profess'       => $this->m_transaksi->getCareProfess(),
-        'ironing'       => $this->m_transaksi->getCareIroning(),
-        'image_path'    => $image_path,
-        'color'         => trim($kualitas_satu->color),
-        'color_of'      => trim($kualitas_satu->color_of),
-        'test_required' => trim($kualitas_satu->test_required),
-    ];
+		$data['penerimaan'] = [
+			'data'          => $this->m_transaksi->getByIdPenerimaan(['id_penerimaan' => $id_penerimaan], 'tbl_penerimaan')->row(),
+			'kualitas'      => $kualitas_data, // list semua kualitas di penerimaan ini
+			'kualitas_satu' => $kualitas_satu, // hanya 1 untuk detail tampilan
+			'email'         => $this->m_transaksi->getEmail()->result(),
+			'material'      => $this->m_transaksi->getMaterial()->result(),
+			'supplier'      => $this->m_transaksi->getSupplier()->result(),
+			'oekotex'       => $this->m_transaksi->getOekotex()->result(),
+			'stages'        => $this->m_transaksi->getStages()->result(),
+			'size'          => $this->m_transaksi->getSizecategory()->result(),
+			'washing'       => $this->m_transaksi->getCareWashing(),
+			'bleching'      => $this->m_transaksi->getCareBleching(),
+			'drying'        => $this->m_transaksi->getCareDrying(),
+			'profess'       => $this->m_transaksi->getCareProfess(),
+			'ironing'       => $this->m_transaksi->getCareIroning(),
+			'image_path'    => $image_path,
+			'color'         => trim($kualitas_satu->color),
+			'color_of'      => trim($kualitas_satu->color_of),
+			'test_required' => trim($kualitas_satu->test_required),
+		];
 
-    $this->template->load('layout/template', 'adidas/kualitas/detail.php', $data);
+		$this->template->load('layout/template', 'adidas/kualitas/detail.php', $data);
 	}
 
 	public function editaksi_report()
@@ -1140,10 +1962,39 @@ class c_transaksi extends CI_Controller {
 		}
 	}
 
+	public function edit_kualitas( $id_penerimaan, $id_reportkualitas)
+	{
+		$data['detail'] = $this->m_transaksi->getKualitasRevisi($id_reportkualitas, $id_penerimaan)->row();
+		$data['method'] = $this->m_transaksi->getReportMethod($id_reportkualitas);
+    	$data['mode'] = 'edit';
+
+		$data['kodemethod'] = $this->m_transaksi->kode_method();
+
+		// Ambil data Method Groups
+		$data['method_groups'] = $this->m_transaksi->get_method_groups();
+	
+		// Ambil Test Matrix berdasarkan Method Group yang dipilih
+		if (!empty($this->input->post('method_group'))) {
+			$id_method_group = $this->input->post('method_group');
+			$this->data['test_matrices'] = $this->m_transaksi->get_test_matrices_by_method_group($id_method_group);
+		}
+
+		$user_level = $this->session->userdata('level');
+
+		if ($user_level == 10) {
+			$this->load->view('adidas/report/update_bc', $data);
+		} else {
+			$this->template->load('layout/template', 'adidas/testRequired/edit', $data);
+		}
+	}
+
+
 	public function index_kualitas()
     {
         // Ambil data kualitas dengan filter
-        $data['kualitas'] = $this->m_transaksi->joinKualitas()->result();
+        //$data['kualitas'] = $this->m_transaksi->joinKualitas()->result();
+		$data['kualitas'] = $this->m_transaksi->joinKualitasByPenerimaan()->result();
+
 
         // Load tampilan dengan data
         $this->template->load('layout/template', 'adidas/kualitas/index.php', $data);
@@ -1158,39 +2009,191 @@ class c_transaksi extends CI_Controller {
         $this->template->load('layoutOther/template', 'adidas/kualitas/index.php', $data);
     }
 
-	public function index_testResult($report_no = null, $id_kualitas = null, $id = null) {
-		// Cek apakah semua parameter telah diisi
+	public function index_testResult($report_no = null, $id_kualitas = null, $id = null)
+	{
+		// ---------------------------------------------------------
+		// Validasi parameter
+		// ---------------------------------------------------------
 		if (empty($report_no) || empty($id_kualitas) || empty($id)) {
 			show_error('Nomor laporan, ID kualitas, atau ID tidak ditemukan.');
 			return;
 		}
-	
-		// Ambil data Method Groups
-		$this->data['method_groups'] = $this->m_transaksi->get_method_groups();
-	
-		// Ambil Test Matrix berdasarkan Method Group yang dipilih
-		if (!empty($this->input->post('method_group'))) {
-			$id_method_group = $this->input->post('method_group');
-			$this->data['test_matrices'] = $this->m_transaksi->get_test_matrices_by_method_group($id_method_group);
+
+		// ---------------------------------------------------------
+		// Ambil test_required dari session / fallback ke current id
+		// ---------------------------------------------------------
+		$id_kualitas_array = $this->session->userdata('id_kualitas_array');
+		if (!$id_kualitas_array) {
+			$id_kualitas_array = [$id_kualitas];
 		}
-	
+
+		// Ambil semua row tbl_kualitas sesuai id_kualitas_array
+		$tests_required_rows = $this->db
+			->where_in('id_kualitas', $id_kualitas_array)
+			->get('tbl_kualitas')
+			->result_array();
+
+		// Ambil kolom 'test_required'
+		$test_required_raw = array_column($tests_required_rows, 'test_required');
+
+		// Array final untuk merge semua test_required
+		$test_required = [];
+		foreach ($test_required_raw as $item) {
+			if (!$item) continue;
+
+			// Coba decode JSON
+			$decoded = json_decode($item, true);
+			if (is_array($decoded)) {
+				$test_required = array_merge($test_required, $decoded);
+			} else {
+				// Jika bukan JSON, anggap CSV "A,B,C"
+				$parts = array_map('trim', explode(',', $item));
+				$test_required = array_merge($test_required, $parts);
+			}
+		}
+
+		// Hapus duplikat
+		$test_required = array_unique($test_required);
+
+		// Kirim ke view
+		$this->data['test_required'] = $test_required;
+
+		// ---------------------------------------------------------
 		// Ambil data lainnya untuk view
-		$this->data['testmatrix'] = $this->m_transaksi->tampil_testmatrix()->result();
+		// ---------------------------------------------------------
+		$this->data['method_groups'] = $this->m_transaksi->get_method_groups();
+		$this->data['testmatrix']    = $this->m_transaksi->tampil_testmatrix()->result();
+		//$this->data['testResult']    = $this->m_transaksi->get_test_result($report_no, $id_kualitas);
+		$this->data['testResult'] = $this->m_transaksi->get_test_result($report_no);
+		$this->data['mode']          = 'create';
+
 		$this->data['penerimaan'] = $this->m_transaksi->get_report($report_no);
 		$this->data['id_kualitas'] = $id_kualitas;
-		$this->data['kodemethod'] = $this->m_transaksi->kode_method();
-		$this->data['testResult'] = $this->m_transaksi->get_test_result($report_no, $id_kualitas);
-		$this->data['kodereport'] = $this->m_transaksi->kodeReportKualitas();
-	
+		$this->data['kodemethod']  = $this->m_transaksi->kode_method();
+		$this->data['kodereport']  = $this->m_transaksi->kodeReportKualitas();
+
 		// Ambil data penerimaan berdasarkan ID
-		$where = array('id_kualitas' => $id);
+		$where = ['id_kualitas' => $id];
 		$this->data['penerimaan'] = $this->m_transaksi->getByIdKualitas($where, 'tbl_kualitas')->result();
-	
-		// Memuat view dengan data yang diperlukan
-		$this->template->load('layout/template', 'adidas/testRequired/testResult.php', $this->data);
+
+		$this->data['report_no'] = $report_no;       // untuk input hidden
+		//$this->data['testRequired'] = $testRequired; // untuk looping di tabel
+
+		// ---------------------------------------------------------
+		// Load view
+		// ---------------------------------------------------------
+		$this->template->load(
+			'layout/template',
+			'adidas/testRequired/testResult.php',
+			$this->data
+		);
 	}
 
-	public function bc_testResult($report_no = null, $id_kualitas = null, $id = null) {
+	/*public function index_testResult($report_no = null, $id_kualitas = null, $id = null, $id_reportkualitas = null, $id_handlingsample = null)
+	{
+		// Validasi parameter penting
+		if (empty($report_no) || empty($id_kualitas) || empty($id)) {
+			show_error('Nomor laporan, ID kualitas, atau ID penerimaan tidak ditemukan.');
+			return;
+		}
+		
+
+		$segment_count = count($this->uri->segment_array());
+		$existing_report = null;
+		$test_required_from_url = '';
+
+		$this->data['method'] = (!empty($id_reportkualitas)) 
+		? $this->m_transaksi->getReportMethod($id_reportkualitas) 
+		: [];
+		 	 
+		if ($segment_count == 6) {
+				$id_reportkualitas = $this->uri->segment(6);
+				$existing_report = $this->m_transaksi->getTestRequired($id, $id_reportkualitas);
+				$test_required_from_url = $existing_report->test_required ?? '';
+
+				// Load test method jika report_kualitas sudah ada
+				$this->data['testMethods'] = $this->m_transaksi->getAllTestMethodByReport($id_reportkualitas);
+				
+			} else {
+				$test_required_from_url = $this->m_transaksi->getTestRequiredName($id_kualitas, $id);
+
+				// Masih input baru, belum ada method
+				$this->data['testMethods'] = [];
+			}
+
+		// Jika ada id_handlingsample, prioritaskan sebagai test_required
+		if (!empty($id_handlingsample)) {
+			$test_required_from_url = urldecode($id_handlingsample);
+		}
+
+		// Data awal untuk view
+		$this->data['method_groups'] = $this->m_transaksi->get_method_groups();
+		if (!empty($this->input->post('method_group'))) {
+			$id_method_group = $this->input->post('method_group');
+			$this->data['test_matrices'] = $this->m_transaksi->get_test_matrices_by_method_group($id_method_group);
+		}
+
+		// Siapkan data untuk form testResult
+		if (!empty($id_reportkualitas)) {
+			$existing_report = $this->m_transaksi->getTestRequired($id, $id_reportkualitas);
+		}
+
+		if ($existing_report) {
+			$this->data['testResult'] = $existing_report;
+			$this->data['kodereport'] = $existing_report->id_reportkualitas;
+		} else {
+			$this->data['kodereport'] = $this->m_transaksi->kodeReportKualitas();
+			$this->data['testResult'] = (object)[
+				'report_no'         => $report_no,
+				'id_kualitas'       => $id_kualitas,
+				'id_penerimaan'     => $id,
+				'test_required'     => $test_required_from_url,
+				'id_reportkualitas' => null,
+			];
+		}
+		
+		// Set default agar tidak undefined saat create data
+		$this->data['selected_method_group'] = '';
+		$this->data['selected_test_matrix'] = '';
+		$this->data['selected_method_code']  = '';
+
+		if ($existing_report) {
+			$this->data['testResult'] = $existing_report;
+
+			// Ambil data method group dan test matrix dari id_testmatrix yang ada
+			if (!empty($existing_report->id_testmatrix)) {
+				$testMatrix = $this->m_transaksi->getTestMatrixDetail($existing_report->id_testmatrix);
+				if ($testMatrix) {
+					$this->data['selected_method_group'] = $testMatrix->group_id; // pastikan field ini benar
+					$this->data['selected_test_matrix'] = $testMatrix->id_testmatrix;
+					$this->data['selected_method_code'] = $testMatrix->method_code;
+				}
+			}
+		}
+
+
+
+		// Data tambahan
+		$this->data['detail']       = $existing_report;
+		$this->data['testmatrix']   = $this->m_transaksi->tampil_testmatrix()->result();
+		$this->data['report_data']  = $this->m_transaksi->get_report($report_no);
+		$this->data['id_kualitas']  = $id_kualitas;
+		$this->data['kodemethod']   = $this->m_transaksi->kode_method();
+		$this->data['penerimaan']   = $this->m_transaksi->getByIdKualitas(['id_kualitas' => $id], 'tbl_kualitas')->result();
+
+		// Load tampilan berdasarkan level user
+		$user_level = $this->session->userdata('level');
+
+		if (!empty($id_reportkualitas) && !empty($id_handlingsample) && $user_level == 10) {
+			$this->load->view('adidas/report/update_bc', $this->data);
+		} elseif (!empty($id_reportkualitas) && !empty($id_handlingsample)) {
+			$this->template->load('layout/template', 'adidas/report/update', $this->data);
+		} else {
+			$this->template->load('layout/template', 'adidas/testRequired/samplemonitoring.php', $this->data);
+		}
+	}*/
+
+		public function bc_testResult($report_no = null, $id_kualitas = null, $id = null) {
 		// Cek apakah semua parameter telah diisi
 		if (empty($report_no) || empty($id_kualitas) || empty($id)) {
 			show_error('Nomor laporan, ID kualitas, atau ID tidak ditemukan.');
@@ -1220,11 +2223,10 @@ class c_transaksi extends CI_Controller {
 		$this->data['penerimaan'] = $this->m_transaksi->getByIdKualitas($where, 'tbl_kualitas')->result();
 	
 		// Memuat view dengan data yang diperlukan
-		//$this->template->load('layout/template', 'adidas/testRequired/testResult.php', $this->data);
+		//$this->template->load('layout/template', 'adidas/testRequired/samplemonitoring.php', $this->data);
 		$this->load->view('adidas/testRequired/bc_testResult', $this->data);  // Memuat view dengan data
 	}
-	
-	
+
 	public function index_testResultOther($report_no = null, $id_kualitas = null, $id = null) {
 		// Cek apakah semua parameter telah diisi
 		if (empty($report_no) || empty($id_kualitas) || empty($id)) {
@@ -1241,6 +2243,10 @@ class c_transaksi extends CI_Controller {
 			$this->data['test_matrices'] = $this->m_transaksi->get_test_matrices_by_method_group($id_method_group);
 		}
 	
+		foreach ($method_dari_db as $row) {
+			$this->load->view('adidas/testRequired/keranjang_method', ['row' => $row]);
+		}
+
 		// Ambil data lainnya untuk view
 		$this->data['testmatrix'] = $this->m_transaksi->tampil_testmatrix()->result();
 		$this->data['penerimaan'] = $this->m_transaksi->get_report($report_no);
@@ -1254,7 +2260,7 @@ class c_transaksi extends CI_Controller {
 		$this->data['penerimaan'] = $this->m_transaksi->getByIdKualitas($where, 'tbl_kualitas')->result();
 	
 		// Memuat view dengan data yang diperlukan
-		$this->template->load('layoutOther/template', 'adidas/testRequired/testResult.php', $this->data);
+		$this->template->load('layoutOther/template', 'adidas/testRequired/samplemonitoring.php', $this->data);
 	}
 	
 	public function get_test_matrices_by_method_group($id_method_group) {
@@ -1278,48 +2284,107 @@ class c_transaksi extends CI_Controller {
 		echo json_encode($data);
 	}
 
-	public function keranjang_method()
-    { 
-        $this->data['testmethod'] = $this->m_transaksi->tampil_testmethod()->result();
-        $this->data['testmatrix'] = $this->m_transaksi->tampil_testmatrix()->result();
-        $this->load->view('adidas/testRequired/keranjang_method.php', $this->data);
-    }
-
-	public function report_test_all($id_penerimaan)
+	/*public function keranjang_method()
 	{
-		$this->data['report'] = $this->m_transaksi->get_report_data_all($id_penerimaan);
-		//$this->data['handling'] = $this->m_transaksi->get_report_data_adidas($id_penerimaan); 
-		$this->data['method'] = $this->m_transaksi-> get_reportmethod_adidasAll($id_penerimaan);
+		// Ambil semua value POST dulu (wajib, sesuai kode kamu)
+		$data_row = [
+			'id_testmethod'     => $this->input->post('id_testmethod'),
+			'report_no'         => $this->input->post('report_no'),
+			'id_order'          => $this->input->post('id_order'),
+			'id_testmatrix'     => $this->input->post('id_testmatrix'),
+			'method_code'       => $this->input->post('method_code'),
+			'method_name'       => $this->input->post('method_name'),
+			'measurement'       => $this->input->post('measurement'),
+			'title'             => $this->input->post('title_row'),
+			'result'            => $this->input->post('result'),
+			'passfail'          => $this->input->post('result_passfail'),
+			'passfail1'         => $this->input->post('result_passfail1'),
+			'comment'           => $this->input->post('comment'),
+			'statement'         => $this->input->post('statement'),
+			'status'            => $this->input->post('status'),
+			'status_passfail'   => $this->input->post('status_passfail'),
+			'be_wash'           => $this->input->post('be_wash'),
+			'af_wash_1'         => $this->input->post('af_wash_1'),
+			'ac_wash_1'         => $this->input->post('ac_wash_1'),
+			'af_wash_5'         => $this->input->post('af_wash_5'),
+			'ac_wash_5'         => $this->input->post('ac_wash_5'),
+			'af_wash_15'        => $this->input->post('af_wash_15'),
+			'ac_wash_15'        => $this->input->post('ac_wash_15'),
+			'status_shrinkage'  => $this->input->post('status_shrinkage'),
+			'status_boolean'    => $this->input->post('status_boolean'),
+			'status_statement_result' => $this->input->post('status_statement_result'),
+			'status_numeric'    => $this->input->post('status_numeric'),
+			'status_formaldehyde' => $this->input->post('status_formaldehyde'),
+			'mass_of'           => $this->input->post('mass_of'),
+			'result_formaldehyde' => $this->input->post('result_formaldehyde'),
+			'range_graph_1'     => $this->input->post('range_graph_1'),
+			'range_graph_2'     => $this->input->post('range_graph_2'),
+		];
 
-		if (!$this->data['method']){
-			show_404();
-			return;
+		// === Ambil data dari database (kalau id_testmatrix ada) ===
+		//$this->load->model('TestMethod_model');
+		$rowDB = $this->M_transaksi->lihat_nama_method($data_row['id_testmatrix']);
+
+		// Kalau database ada datanya → isi POST yang kosong
+		if ($rowDB) {
+			foreach ($data_row as $key => $value) {
+				if ($value === "" || $value === null) {
+					if (isset($rowDB->$key)) {
+						$data_row[$key] = $rowDB->$key;
+					}
+				}
+			}
 		}
 
-		  // Set data untuk title dan lainnya
-        $this->data['title'] = 'FABRIC TEST REPORT';
-        $this->data['no'] = 1; // Ini bisa diubah sesuai kebutuhan
+		// load view
+		$this->load->view('adidas/testRequired/keranjang_method', [
+			'data_row' => $data_row
+		]);
+	}*/
 
-        // Menyiapkan Dompdf
-        $options = new Options();
-        $options->set('isHtml5ParserEnabled', true);
-        $options->set('isPhpEnabled', true); // Enable PHP in HTML (Jika diperlukan)
+	public function keranjang_method()
+	{
+		$data_row = [
+			'id_testmethod'		=> $this->input->post('id_testmethod'),
+			'report_no'         => $this->input->post('report_no'),
+			'id_order'          => $this->input->post('id_order'),
+			'id_testmatrix'     => $this->input->post('id_testmatrix'),
+			'method_code'       => $this->input->post('method_code'),
+			'method_name'       => $this->input->post('method_name'),
+			'measurement'       => $this->input->post('measurement'),
+			'title'         	=> $this->input->post('title'),
+			'result'            => $this->input->post('result'),
+			'passfail'   		=> $this->input->post('result_passfail'),
+			'passfail1'  		=> $this->input->post('result_passfail1'),
+			'comment'           => $this->input->post('comment'),
+			'statement'         => $this->input->post('statement'),
+			'status'            => $this->input->post('status'),
+			'status_passfail'   => $this->input->post('status_passfail'),
+			'be_wash'			=> $this->input->post('be_wash'),
+			'af_wash_1'			=> $this->input->post('af_wash_1'),
+			'ac_wash_1'			=> $this->input->post('ac_wash_1'),
+			'af_wash_5'			=> $this->input->post('af_wash_5'),
+			'ac_wash_5'			=> $this->input->post('ac_wash_5'),
+			'af_wash_15'		=> $this->input->post('af_wash_15'),
+			'ac_wash_15'		=> $this->input->post('ac_wash_15'),
+			'status_shrinkage'	=> $this->input->post('status_shrinkage'),
+			'status_boolean' 	=> $this->input->post('status_boolean'),
+			'status_statement_result' => $this->input->post('gstatus_statement_result'),
+			'status_numeric' 	=> $this->input->post('status_numeric'),
+			'status_formaldehyde' => $this->input->post('status_formaldehyde'),
+			'mass_of'			=> $this->input->post('mass_of'),
+			'result_formaldehyde' => $this->input->post('result_formaldehyde'),
+			'range_graph_1' => $this->input->post('range_graph_1'),
+			'range_graph_2'	=> $this->input->post('range_graph_2'),
+			'nahm_sock' 		=> $this->input->post('nahm_sock'),
+			'result_sock'	=> $this->input->post('result_sock'),
+			'comment_sock'	=> $this->input->post('comment_sock'),
+			'status_sock'	=> $this->input->post('status_sock')
+		];
 
-        // Inisialisasi Dompdf dengan options
-        $dompdf = new Dompdf($options);
-
-        $dompdf->setPaper('A4', 'portrait'); // Set ukuran kertas
-
-        // Muat view HTML untuk laporan
-        $html = $this->load->view('adidas/report/reportTestAll', $this->data, true);
-
-        // Load HTML ke Dompdf dan render
-        $dompdf->loadHtml($html);
-        $dompdf->render();
-
-        // Mengunduh atau menampilkan hasil PDF
-        $dompdf->stream('FGT Report ' . date('d F Y'), array("Attachment" => false)); // Tampilkan PDF di browser
+		$this->load->view('adidas/testRequired/keranjang_method', ['data_row' => $data_row]);
 	}
+
 
 	public function report_test($id_handlingsample)
     {
@@ -1347,6 +2412,7 @@ class c_transaksi extends CI_Controller {
 			show_404();
 			return;
 		}
+
         // Set data untuk title dan lainnya
         $this->data['title'] = 'FABRIC TEST REPORT';
         $this->data['no'] = 1; // Ini bisa diubah sesuai kebutuhan
@@ -1673,6 +2739,7 @@ class c_transaksi extends CI_Controller {
 		echo json_encode($data);
 	}
 
+	
 	public function index_material()
 	{
 		$data['index'] = $this->m_transaksi->getMaterial()->result();
@@ -2249,7 +3316,7 @@ class c_transaksi extends CI_Controller {
 	public function tambahaksi_care()
     {
         // Konfigurasi untuk upload file
-        $config['upload_path'] = FCPATH . '../testresult/images/';
+        $config['upload_path'] = FCPATH . '../samplemonitoring/images/care_instruction/';
         $config['allowed_types'] = 'png|jpg|gif';
         $config['max_size'] = 2048; // 2MB
         $config['max_width'] = 40000;
@@ -2293,7 +3360,7 @@ class c_transaksi extends CI_Controller {
 	public function tambahaksi_careOther()
     {
         // Konfigurasi untuk upload file
-        $config['upload_path'] = FCPATH . '../testresult/images/';
+        $config['upload_path'] = FCPATH . '../samplemonitoring/images/care_instruction/';
         $config['allowed_types'] = 'png|jpg|gif';
         $config['max_size'] = 2048; // 2MB
         $config['max_width'] = 40000;
@@ -2334,7 +3401,29 @@ class c_transaksi extends CI_Controller {
         }
     }
 
+	public function delete_care($id_care)
+	{
+		$this->db->where('id_care', $id_care);
+		$this->db->delete('m_care');
 
+		redirect('c_transaksi/index_careInstruction');
+	}
+
+	public function edit_care($id_care)
+	{
+		$where = ['id_care' => $id_care];
+		$data['care'] = $this->m_transaksi->getByIdCare($where)->row();
+
+		if (!$data['care']) {
+			show_404();
+		}
+
+		$this->template->load(
+			'layout/template',
+			'masterData/careInstruction/edit',
+			$data
+		);
+	}
 
 	public function upload()
     {   
@@ -2345,7 +3434,7 @@ class c_transaksi extends CI_Controller {
                 mkdir($upload_dir);
             }
 
-        $config['upload_path']          = './xampp/htdocs/testresult/images/';
+        $config['upload_path']          = './xampp/htdocs/samplemonitoring/images/';
         $config['allowed_types']        = 'png|jpg|gif|jpeg';
         $config['max_size']             = 2048;
         $config['max_width']            = 40000;
@@ -2376,48 +3465,71 @@ class c_transaksi extends CI_Controller {
     }
 
 	
+public function editaksi_care()
+{
+    $id_care        = $this->input->post('id_care');
+    $kategori_care  = $this->input->post('kategori_care');
+    $deskripsi      = $this->input->post('deskripsi');
 
-	public function editaksi_care()
-    {
-        $id_care = $this->input->post('id_care');
-        $kategori_care = $this->input->post('kategori_care');
-        $simbol_care = $this->input->post('simbol_care');
-        $deskripsi = $this->input->post('deskripsi');
+    // ambil data lama
+    $care_lama = $this->db
+        ->get_where('m_care', ['id_care' => $id_care])
+        ->row();
 
-        $config['upload_path']			= FCPATH . '../testresult/images/';
-		$config['allowed_types']        = 'png|jpg|gif';
-		$config['max_size']             = 2048;
-		$config['max_width']            = 40000;
-		$config['max_height']           = 40000; 
-
-        $this->load->library('upload', $config);
-
-        $data = array(
-            'id_care' => $id_care,
-            'kategori_care' => $kategori_care,
-            'simbol_care' => $simbol_care['file_name'],
-            'deskripsi' => $deskripsi
-        );
-
-        if(!$this->upload->do_upload('simbol_care'))
-        {
-            $error = array('error' => $this->upload->display_errors());
-            redirect('c_transaksi/index_careInstuction', $error);
-        }else{
-
-            $upload_data = $this->upload->data();
-            $data['simbol_care'] = $upload_data['file_name'];
-
-            $update = $this->db->where('id_care', $id_care);
-            $update = $this->db->update('m_care', $data);
-
-            if($update){
-                redirect('c_transaksi/index_careInstruction');
-              }else{
-                  echo "Gagal";
-              }
-        }
+    if (!$care_lama) {
+        show_404();
     }
+
+    // data update (tanpa simbol dulu)
+    $data = [
+        'kategori_care' => $kategori_care,
+        'deskripsi'     => $deskripsi
+    ];
+
+    // === KONFIG UPLOAD ===
+  if (!empty($_FILES['simbol_care']['name'])) {
+
+    $config['upload_path']   = FCPATH . 'images/care_instruction/';
+    $config['allowed_types'] = 'png|jpg|gif';
+    $config['max_size']      = 2048;
+    $config['encrypt_name']  = TRUE;
+
+    // WAJIB seperti ini
+    $this->load->library('upload');
+    $this->upload->initialize($config);
+
+    if (!$this->upload->do_upload('simbol_care')) {
+
+        $this->session->set_flashdata(
+            'error',
+            $this->upload->display_errors()
+        );
+        redirect('c_transaksi/edit_care/' . $id_care);
+        return;
+    }
+
+    $upload_data = $this->upload->data();
+    $data['simbol_care'] = $upload_data['file_name'];
+
+    if (!empty($care_lama->simbol_care)) {
+        @unlink(FCPATH . 'images/care_instruction/' . $care_lama->simbol_care);
+    }
+}
+
+
+    // update DB
+    $update = $this->db->where('id_care', $id_care)
+                       ->update('m_care', $data);
+
+    if ($update) {
+        $this->session->set_flashdata('success', 'Data berhasil diperbarui');
+        redirect('c_transaksi/index_careInstruction');
+    } else {
+        $this->session->set_flashdata('error', 'Gagal memperbarui data');
+        redirect('c_transaksi/edit_care/' . $id_care);
+    }
+}
+
 
 	public function editaksi_careOther()
     {
@@ -2426,7 +3538,7 @@ class c_transaksi extends CI_Controller {
         $simbol_care = $this->input->post('simbol_care');
         $deskripsi = $this->input->post('deskripsi');
 
-        $config['upload_path']			= FCPATH . '../testresult/images/';
+        $config['upload_path']			= FCPATH . '../samplemonitoring/images/care_instruction/';
 		$config['allowed_types']        = 'png|jpg|gif';
 		$config['max_size']             = 2048;
 		$config['max_width']            = 40000;
@@ -2487,20 +3599,343 @@ class c_transaksi extends CI_Controller {
 
 	public function tambahaksi_method()
 	{
+		// ---------------------------------------------------------
+		// Helper aman ambil POST array
+		// ---------------------------------------------------------
+		function postArr($key, $i)
+		{
+			$ci = &get_instance();
+			$arr = $ci->input->post($key);
+			return isset($arr[$i]) ? $arr[$i] : null;
+		}
 
+		// ---------------------------------------------------------
+		// VALIDASI: minimal 1 method
+		// ---------------------------------------------------------
 		$testmatrix_post = $this->input->post('id_testmatrix_hidden');
 
 		if (empty($testmatrix_post) || count(array_filter($testmatrix_post)) === 0) {
 			$this->session->set_flashdata('error', 'Data metode pengujian tidak boleh kosong.');
-			redirect('c_transaksi/index_testResult/' .
-			$this->input->post('report_no') . '/' .
-			$this->input->post('id_kualitas') . '/' .
-			$this->input->post('id_penerimaan'));
+			redirect(
+				'c_transaksi/index_testResult/' .
+				$this->input->post('report_no') . '/' .
+				$this->input->post('id_kualitas') . '/' .
+				$this->input->post('id_penerimaan')
+			);
+			return;
+		}
+
+		// ---------------------------------------------------------
+		// AMBIL test_required SEKALI (GLOBAL)
+		// ---------------------------------------------------------
+		$test_required_post = $this->input->post('test_required');
+
+		$test_required_json = is_array($test_required_post)
+			? json_encode($test_required_post)
+			: $test_required_post;
+
+		// ---------------------------------------------------------
+		// PREPARE LOOP
+		// ---------------------------------------------------------
+		$jumlah_method = count((array) $testmatrix_post);
+		$data = [];
+
+		// ---------------------------------------------------------
+		// LOOP INSERT METHOD
+		// ---------------------------------------------------------
+		for ($i = 0; $i < $jumlah_method; $i++) {
+
+			$data[$i] = [
+				// IDENTITAS
+				'id_testmatrix'      => postArr('id_testmatrix_hidden', $i),
+				'id_reportkualitas'  => $this->input->post('id_reportkualitas'),
+				'id_penerimaan'      => $this->input->post('id_penerimaan'),
+				'id_kualitas'        => $this->input->post('id_kualitas'),
+				'report_no'          => $this->input->post('report_no'),
+
+				// FIX UTAMA 🔥
+				'test_required'      => $test_required_json,
+
+				// RESULT
+				'result'             => postArr('result_hidden', $i),
+				'status'             => postArr('status_hidden', $i),
+
+				// PASS FAIL
+				'passfail'           => postArr('result_passfail_hidden', $i),
+				'passfail1'          => postArr('result_passfail1_hidden', $i),
+				'status_passfail'    => postArr('status_passfail_hidden', $i),
+
+				// COMMENT & STATEMENT
+				'comment'            => postArr('comment_hidden', $i),
+				'statement'          => postArr('statement_hidden', $i),
+
+				// TANGGAL
+				'date_sampling'      => $this->input->post('date_sampling'),
+				'time_sampling'      => $this->input->post('time_sampling'),
+				'date_test'          => $this->input->post('date_test'),
+				'date_finish'        => $this->input->post('date_finish'),
+
+				// STATUS TYPE
+				'status_boolean'          => postArr('status_boolean', $i),
+				'status_statement_result' => postArr('status_statement_result', $i),
+				'status_numeric'          => postArr('status_numeric', $i),
+				'status_shrinkage'        => postArr('status_shrinkage', $i),
+			];
+		}
+
+		// ---------------------------------------------------------
+		// DATA SUMMARY REPORT
+		// ---------------------------------------------------------
+		$data_report = [
+			'id_reportkualitas' => $this->input->post('id_reportkualitas'),
+			'id_penerimaan'     => $this->input->post('id_penerimaan'),
+			'id_kualitas'       => $this->input->post('id_kualitas'),
+			'result_status'     => $this->input->post('result_status'),
+			'date_final'        => $this->input->post('date_final')
+		];
+
+		// ---------------------------------------------------------
+		// TRANSAKSI DB
+		// ---------------------------------------------------------
+		$this->db->trans_start();
+
+		// insert detail method
+		$this->m_transaksi->insert_reportkualitas($data);
+
+		// insert summary
+		$this->m_transaksi->insert_handlingsample($data_report);
+
+		// update status kualitas (SUDAH BENAR)
+		$this->db->where('id_kualitas', $this->input->post('id_kualitas'));
+		$this->db->update('tbl_kualitas', ['status' => 'selesai']);
+
+		$this->db->trans_complete();
+
+		// ---------------------------------------------------------
+		// FINAL
+		// ---------------------------------------------------------
+		if ($this->db->trans_status() === FALSE) {
+			log_message('error', 'Transaction failed during insert.');
+			redirect('c_transaksi/error');
+		} else {
+			$this->checkAndInsertFinalHandling(
+				$this->input->post('id_penerimaan'),
+				$this->input->post('report_no')
+			);
+
+			redirect('c_transaksi/index_kualitas');
+		}
+	}
+
+	public function editaksi_method()
+	{
+		// Helper biar tidak Undefined Index
+		function postArr($key, $i)
+		{
+			$ci = &get_instance();
+			$arr = $ci->input->post($key);
+			return isset($arr[$i]) ? $arr[$i] : null;
+		}
+
+		// Data testmatrix yang dikirim dari form
+		$testmatrix_post = $this->input->post('id_testmatrix_hidden');
+
+		// Validasi minimal 1 baris
+		if (empty($testmatrix_post) || count(array_filter($testmatrix_post)) === 0) {
+			$this->session->set_flashdata('error', 'Data metode pengujian tidak boleh kosong.');
+			redirect('c_transaksi/edit_kualitas/' .
+			$this->input->post('id_penerimaan') . '/' .
+			$this->input->post('id_reportkualitas'));
+			return;
+		}
+
+		$id_reportkualitas = $this->input->post('id_reportkualitas');
+		$jumlah_method = count((array)$testmatrix_post);
+
+		$data = [];
+
+		// LOOP UPDATE
+		for ($i = 0; $i < $jumlah_method; $i++) {
+
+		$data[$i] = [
+			// IDENTITAS
+			'id_testmatrix'      => postArr('id_testmatrix_hidden', $i),
+			'id_reportkualitas'  => $id_reportkualitas,
+			'id_penerimaan'      => $this->input->post('id_penerimaan'),
+			'id_kualitas'        => $this->input->post('id_kualitas'),
+			'report_no'          => $this->input->post('report_no'),
+			'test_required'      => $this->input->post('test_required'),
+
+			// RESULT
+			'result'             => postArr('result_hidden', $i),
+			'status'             => postArr('status_hidden', $i),
+
+			// PASS FAIL
+			'passfail'           => postArr('result_passfail_hidden', $i),
+			'passfail1'          => postArr('result_passfail1_hidden', $i),
+			'status_passfail'    => postArr('status_passfail_hidden', $i),
+
+			// COMMENT & STATEMENT
+			'comment'            => postArr('comment_hidden', $i),
+			'statement'          => postArr('statement_hidden', $i),
+
+			// TANGGAL
+			'date_sampling'      => $this->input->post('date_sampling'),
+			'time_sampling'      => $this->input->post('time_sampling'),
+			'date_test'          => $this->input->post('date_test'),
+			'date_finish'        => $this->input->post('date_finish'),
+
+			// STATUS TYPE
+			'status_boolean'     => postArr('status_boolean', $i),
+			'status_statement_result' => postArr('status_statement_result', $i),
+			'status_numeric'     => postArr('status_numeric', $i),
+			'status_shrinkage'   => postArr('status_shrinkage', $i),
+
+			// SHRINKAGE
+			'be_wash'    => postArr('be_wash', $i),
+			'af_wash_1'  => postArr('af_wash_1', $i),
+			'ac_wash_1'  => postArr('ac_wash_1', $i),
+			'af_wash_5'  => postArr('af_wash_5', $i),
+			'ac_wash_5'  => postArr('ac_wash_5', $i),
+			'af_wash_15' => postArr('af_wash_15', $i),
+			'ac_wash_15' => postArr('ac_wash_15', $i),
+
+			// FORMALDEHYDE (⚠️ PALING KRITIS)
+			'mass_of'             => postArr('mass_of_hidden', $i),
+			'range_graph_1'       => postArr('range_graph_1_hidden', $i),
+			'range_graph_2'       => postArr('range_graph_2_hidden', $i),
+			'result_formaldehyde' => postArr('result_formaldehyde_hidden', $i),
+			'status_formaldehyde' => postArr('status_formaldehyde', $i),
+
+			// SOCK
+			'nahm_sock'    => postArr('nahm_sock', $i),
+			'result_sock'  => postArr('result_sock', $i),
+			'comment_sock' => postArr('comment_sock', $i),
+			'status_sock'  => postArr('status_sock', $i),
+
+			// COM WASH (GLOBAL)
+			'com_wash_app'    => $this->input->post('com_wash_app'),
+			'com_wash_shrink' => $this->input->post('com_wash_shrink'),
+			'com_wash_pil'    => $this->input->post('com_wash_pil'),
+			'com_wash_sta'    => $this->input->post('com_wash_sta'),
+			'com_wash_dis'    => $this->input->post('com_wash_dis'),
+			'com_wash_zip'    => $this->input->post('com_wash_zip'),
+			'com_wash_label'  => $this->input->post('com_wash_label'),
+			'com_wash_emb'    => $this->input->post('com_wash_emb'),
+			'com_wash_print'  => $this->input->post('com_wash_print'),
+			'com_wash_logo'   => $this->input->post('com_wash_logo'),
+
+			// WASH 1X
+			'1_wash_print'  => $this->input->post('1_wash_print'),
+			'1_wash_emb'    => $this->input->post('1_wash_emb'),
+			'1_wash_label'  => $this->input->post('1_wash_label'),
+			'1_wash_zip'    => $this->input->post('1_wash_zip'),
+			'1_wash_dis'    => $this->input->post('1_wash_dis'),
+			'1_wash_sta'    => $this->input->post('1_wash_sta'),
+			'1_wash_pil'    => $this->input->post('1_wash_pil'),
+			'1_wash_shrink' => $this->input->post('1_wash_shrink'),
+			'1_wash_app'    => $this->input->post('1_wash_app'),
+			'1_wash_logo'   => $this->input->post('1_wash_logo'),
+
+			// WASH 3X
+			'3_wash_print'  => $this->input->post('3_wash_print'),
+			'3_wash_emb'    => $this->input->post('3_wash_emb'),
+			'3_wash_label'  => $this->input->post('3_wash_label'),
+			'3_wash_zip'    => $this->input->post('3_wash_zip'),
+			'3_wash_dis'    => $this->input->post('3_wash_dis'),
+			'3_wash_sta'    => $this->input->post('3_wash_sta'),
+			'3_wash_pil'    => $this->input->post('3_wash_pil'),
+			'3_wash_shrink' => $this->input->post('3_wash_shrink'),
+			'3_wash_app'    => $this->input->post('3_wash_app'),
+			'3_wash_logo'   => $this->input->post('3_wash_logo'),
+
+			// WASH 15X
+			'15_wash_print'  => $this->input->post('15_wash_print'),
+			'15_wash_emb'    => $this->input->post('15_wash_emb'),
+			'15_wash_label'  => $this->input->post('15_wash_label'),
+			'15_wash_zip'    => $this->input->post('15_wash_zip'),
+			'15_wash_dis'    => $this->input->post('15_wash_dis'),
+			'15_wash_sta'    => $this->input->post('15_wash_sta'),
+			'15_wash_pil'    => $this->input->post('15_wash_pil'),
+			'15_wash_shrink' => $this->input->post('15_wash_shrink'),
+			'15_wash_app'    => $this->input->post('15_wash_app'),
+			'15_wash_logo'   => $this->input->post('15_wash_logo'),
+
+			// MEASUREMENTS (GLOBAL)
+			'mov_sleeve'    => $this->input->post('mov_sleeve'),
+			'mov_sideseam'  => $this->input->post('mov_sideseam'),
+			'sle_width'     => $this->input->post('sle_width'),
+			'sideseam'      => $this->input->post('sideseam'),
+			'sleeve'        => $this->input->post('sleeve'),
+			'body'          => $this->input->post('body'),
+			'neck_no'       => $this->input->post('neck_no'),
+			'neck_yes'      => $this->input->post('neck_yes'),
+			'fibre_com'     => $this->input->post('fibre_com'),
+			'machine_model' => $this->input->post('machine_model'),
+			'temp'          => $this->input->post('temp'),
+			'hand_dry'      => $this->input->post('hand_dry'),
+			'tumble_dry'    => $this->input->post('tumble_dry'),
+			'line_dry'      => $this->input->post('line_dry')
+		];
+	}
+
+
+		// Data summary
+		$data_report = [
+			'id_reportkualitas' => $id_reportkualitas,
+			'id_penerimaan'     => $this->input->post('id_penerimaan'),
+			'id_kualitas'       => $this->input->post('id_kualitas'),
+			'result_status'     => $this->input->post('result_status'),
+			'date_final'        => $this->input->post('date_final')
+		];
+
+		// TRANSAKSI
+		$this->db->trans_start();
+
+		// DELETE DATA LAMA
+		$this->m_transaksi->delete_reportkualitas_by_id($id_reportkualitas);
+
+		// INSERT DATA BARU
+		$this->m_transaksi->insert_reportkualitas($data);
+
+		// UPDATE SUMMARY
+		$this->m_transaksi->update_handlingsample($data_report, $id_reportkualitas);
+
+		// STATUS selalu ‘selesai’
+		$this->db->where('id_kualitas', $this->input->post('id_kualitas'));
+		$this->db->update('tbl_kualitas', ['status' => 'selesai']);
+
+		$this->db->trans_complete();
+
+		if ($this->db->trans_status() === FALSE) {
+			log_message('error', 'Transaction failed during update.');
+			redirect('c_transaksi/error');
+		} else {
+			$this->checkAndInsertFinalHandling(
+				$this->input->post('id_penerimaan'),
+				$this->input->post('report_no')
+			);
+
+			redirect('c_transaksi/index_kualitas');
+		}
+	}
+
+
+	public function tambahaksi_methodbc()
+	{
+		$testmatrix_post = $this->input->post('id_testmatrix_hidden');
+
+		if (empty($testmatrix_post) || count(array_filter($testmatrix_post)) === 0) {
+			$this->session->set_flashdata('error', 'Data metode pengujian tidak boleh kosong.');
+			redirect('c_transaksi/index_bcTestResult/' . 
+				$this->input->post('report_no') . '/' . 
+				$this->input->post('id_kualitas') . '/' . 
+				$this->input->post('id_penerimaan'));
 			return;
 		}
 
 		$jumlah_method = count((array) $this->input->post('id_testmatrix_hidden'));
-		
+
 		$data = [];
 		for ($i = 0; $i < $jumlah_method; $i++) {
 			array_push($data, ['id_testmatrix' => $this->input->post('id_testmatrix_hidden')[$i]]);
@@ -2522,118 +3957,39 @@ class c_transaksi extends CI_Controller {
 			$data[$i]['date_finish'] = $this->input->post('date_finish');
 		}
 
-		// Data untuk report_handlingsample
 		$data_report = array(
 			'id_reportkualitas' => $this->input->post('id_reportkualitas'),
 			'id_penerimaan' => $this->input->post('id_penerimaan'),
 			'id_kualitas' => $this->input->post('id_kualitas'),
 			'result_status' => $this->input->post('result_status'),
-			 'date_final'       => $this->input->post('date_final')
+			'date_final' => $this->input->post('date_final') // ditambahkan agar seragam
 		);
 
-		// Mulai transaksi
 		$this->db->trans_start();
 
-		// Insert ke report_kualitas
 		$this->m_transaksi->insert_reportkualitas($data);
-
-		// Insert ke report_handlingsample
 		$this->m_transaksi->insert_handlingsample($data_report);
 
-		// ✅ Update status di tbl_kualitas jadi 'selesai'
+		// Update status kualitas jadi selesai
 		$this->db->where('id_kualitas', $this->input->post('id_kualitas'));
 		$this->db->update('tbl_kualitas', ['status' => 'selesai']);
 
-		// Selesaikan transaksi
-		$this->db->trans_complete(); 	
-
+		$this->db->trans_complete();
 
 		if ($this->db->trans_status() === FALSE) {
 			log_message('error', 'Transaction failed during insert.');
 			redirect('c_transaksi/error');
 		} else {
-
-			   // Cek apakah bisa masuk report_finalhandling
+			// Check insert ke final handling
 			$this->checkAndInsertFinalHandling(
 				$this->input->post('id_penerimaan'),
 				$this->input->post('report_no')
 			);
 
-			redirect('c_transaksi/index_kualitas');
+			// Redirect ke halaman hasil barcode
+			redirect('c_transaksi/index_bcKualitas/' . url_title($this->input->post('report_no'), 'dash', TRUE));
 		}
 	}
-
-
-	
-public function tambahaksi_methodbc()
-{
-	$testmatrix_post = $this->input->post('id_testmatrix_hidden');
-
-	if (empty($testmatrix_post) || count(array_filter($testmatrix_post)) === 0) {
-		$this->session->set_flashdata('error', 'Data metode pengujian tidak boleh kosong.');
-		redirect('c_transaksi/index_bcTestResult/' . 
-			$this->input->post('report_no') . '/' . 
-			$this->input->post('id_kualitas') . '/' . 
-			$this->input->post('id_penerimaan'));
-		return;
-	}
-
-	$jumlah_method = count((array) $this->input->post('id_testmatrix_hidden'));
-
-	$data = [];
-	for ($i = 0; $i < $jumlah_method; $i++) {
-		array_push($data, ['id_testmatrix' => $this->input->post('id_testmatrix_hidden')[$i]]);
-		$data[$i]['id_reportkualitas'] = $this->input->post('id_reportkualitas');
-		$data[$i]['id_penerimaan'] = $this->input->post('id_penerimaan');
-		$data[$i]['id_kualitas'] = $this->input->post('id_kualitas');
-		$data[$i]['report_no'] = $this->input->post('report_no');
-		$data[$i]['test_required'] = $this->input->post('test_required');
-		$data[$i]['result'] = $this->input->post('result_hidden')[$i];
-		$data[$i]['status'] = $this->input->post('status_hidden')[$i];
-		$data[$i]['passfail'] = $this->input->post('result_passfail_hidden')[$i];
-		$data[$i]['passfail1'] = $this->input->post('result_passfail1_hidden')[$i];
-		$data[$i]['status_passfail'] = $this->input->post('status_passfail_hidden')[$i];
-		$data[$i]['comment'] = $this->input->post('comment_hidden')[$i];
-		$data[$i]['statement'] = $this->input->post('statement_hidden')[$i];
-		$data[$i]['date_sampling'] = $this->input->post('date_sampling');
-		$data[$i]['time_sampling'] = $this->input->post('time_sampling');
-		$data[$i]['date_test'] = $this->input->post('date_test');
-		$data[$i]['date_finish'] = $this->input->post('date_finish');
-	}
-
-	$data_report = array(
-		'id_reportkualitas' => $this->input->post('id_reportkualitas'),
-		'id_penerimaan' => $this->input->post('id_penerimaan'),
-		'id_kualitas' => $this->input->post('id_kualitas'),
-		'result_status' => $this->input->post('result_status'),
-		'date_final' => $this->input->post('date_final') // ditambahkan agar seragam
-	);
-
-	$this->db->trans_start();
-
-	$this->m_transaksi->insert_reportkualitas($data);
-	$this->m_transaksi->insert_handlingsample($data_report);
-
-	// Update status kualitas jadi selesai
-	$this->db->where('id_kualitas', $this->input->post('id_kualitas'));
-	$this->db->update('tbl_kualitas', ['status' => 'selesai']);
-
-	$this->db->trans_complete();
-
-	if ($this->db->trans_status() === FALSE) {
-		log_message('error', 'Transaction failed during insert.');
-		redirect('c_transaksi/error');
-	} else {
-		// Check insert ke final handling
-		$this->checkAndInsertFinalHandling(
-			$this->input->post('id_penerimaan'),
-			$this->input->post('report_no')
-		);
-
-		// Redirect ke halaman hasil barcode
-		redirect('c_transaksi/index_bcKualitas/' . url_title($this->input->post('report_no'), 'dash', TRUE));
-	}
-}
 
 
 	public function tambahaksi_methodOther()
@@ -2691,33 +4047,75 @@ public function tambahaksi_methodbc()
 			redirect('c_transaksi/index_kualitasOther');
 		}
 	}
-
-
-	public function update_report($id_reportkualitas, $id_handlingsample)
-	{
-		// Ambil data
-		$data['detail'] = $this->m_transaksi->getReportUpdate($id_reportkualitas, $id_handlingsample)->row();
-		$data['method'] = $this->m_transaksi->getReportMethod($id_reportkualitas);
-
-		// Cek level user
-		$user_level = $this->session->userdata('level');
-
-		// Jika level 10 (barcode user) maka load view khusus
-		if ($user_level == 10) {
-			$this->load->view('adidas/report/update_bc', $data);
-		} else {
-			$this->template->load('layout/template', 'adidas/report/update', $data);
-		}
-	}
-
-	
 	
 	public function index_user()
 	{
 		$data['user'] = $this->m_transaksi->tampil_data()->result();
         $data['level'] = $this->m_transaksi->get_level()->result();
-		$this->template->load('layout/template', 'adidas/user/tambah', $data);
+		$this->template->load('layout/template', 'adidas/user/account/index', $data);
 	}
+
+	public function tambah_user()
+	{
+		$data['user'] = $this->m_transaksi->tampil_data()->result();
+        $data['level'] = $this->m_transaksi->get_level()->result();
+		$this->template->load('layout/template', 'adidas/user/account/tambah', $data);
+	}
+
+		public function edit_user($id_user)
+		{
+			$where = ['id_user' => $id_user];
+
+			$data['u'] = $this->m_transaksi->GetByIdUser($where); // 1 object
+			$data['level'] = $this->m_transaksi->get_level()->result();
+			$data['user'] = $this->m_transaksi->tampil_data()->result();
+			
+			$this->template->load(
+				'layout/template',
+				'adidas/user/account/edit',
+				$data
+			);
+		}
+
+		public function editaksi_account()
+{
+    // ambil data dari form
+    $id_user     = $this->input->post('id_user');
+    $nama        = $this->input->post('nama');
+    $username    = $this->input->post('username');
+    $password    = $this->input->post('password');
+    $id_level    = $this->input->post('id_level');
+    $user_status = $this->input->post('user_status');
+
+    // data utama (tanpa password dulu)
+    $data = [
+        'nama'        => $nama,
+        'username'    => $username,
+        'id_level'    => $id_level,
+        'user_status' => $user_status
+    ];
+
+    // kalau password diisi → update
+    if (!empty($password)) {
+        $data['password'] = password_hash($password, PASSWORD_DEFAULT);
+    }
+
+    // update ke DB
+    $this->db->where('id_user', $id_user);
+    $update = $this->db->update('tbl_login', $data);
+
+    // feedback
+    if ($update) {
+        $this->session->set_flashdata('success', 'Data user berhasil diperbarui');
+    } else {
+        $this->session->set_flashdata('error', 'Gagal memperbarui data user');
+    }
+
+    redirect('c_transaksi/account');
+}
+
+
+
 
 	public function index_userOther()
 	{
@@ -2769,4 +4167,816 @@ public function tambahaksi_methodbc()
 
         redirect('c_transaksi/index_userOther');
     }
+
+	public function ambil_dataorder($id_order = null)
+	{
+		$data = $this->db->get_where('tbl_order', ['id_order' => $id_order])->row();
+
+		if ($data) {
+			$this->session->set_flashdata('id_order', $data->id_order);
+			$this->session->set_flashdata('working_number', $data->working_number);
+			$this->session->set_flashdata('item_name', $data->item_name);
+			$this->session->set_flashdata('style', $data->style);
+			$this->session->set_flashdata('brand', $data->brand);
+			$this->session->set_flashdata('order_number', $data->order_number);
+			$this->session->set_flashdata('costumer_code', $data->costumer_code);
+			$this->session->set_flashdata('costumer_name', $data->costumer_name);
+			$this->session->set_flashdata('article_no', $data->article_no);
+			$this->session->set_flashdata('color', $data->color);
+			$this->session->set_flashdata('age', $data->age);
+			$this->session->set_flashdata('podd', $data->podd);
+			$this->session->set_flashdata('lco', $data->lco);
+			$this->session->set_flashdata('po_quantity', $data->po_quantity);
+			$this->session->set_flashdata('production_date', $data->production_date);
+			$this->session->set_flashdata('season', $data->season);
+			$this->session->set_flashdata('line', $data->line);
+		}
+
+		redirect('c_transaksi/tambah_penerimaan');
+	}
+
+	public function get_dataorder()
+	{
+		$order_number = $this->input->post('order_number');
+		$data = $this->db->get_where('tbl_order', ['order_number' => $order_number])->row_array();
+
+		echo json_encode($data);
+	}
+
+	/*public function index_rilis($id_penerimaan, $new_report_no)
+	{
+		$this->data['riwayat'] = $this->m_transaksi->getHistoryNo($id_penerimaan);
+		$this->data['id_penerimaan'] = $id_penerimaan; 
+		$this->data['new_report_no'] = $new_report_no;
+		$this->data['report'] = $this->m_transaksi->get_report_data_all($id_penerimaan);
+		//$this->data['handling'] = $this->m_transaksi->get_report_data_adidas($id_penerimaan); 
+		$this->data['method'] = $this->m_transaksi->get_reportmethod_adidasAll($id_penerimaan, $new_report_no);
+        $this->data['ttd'] = $this->m_transaksi->tampil_ttd()->result();
+		
+		if (!$this->data['method']){
+			show_404();
+			return;
+		}
+		$this->template->load('layout/template', 'adidas/report/re_rilis.php', $this->data);
+	}*/
+	/*public function index_rilis($id_penerimaan, $new_report_no)
+	{
+		$this->data['riwayat'] = $this->m_transaksi->getHistoryNo($id_penerimaan);
+		$this->data['id_penerimaan'] = $id_penerimaan; 
+		$this->data['new_report_no'] = $new_report_no;
+
+		// 🔹 AMBIL REPORT NO LAMA
+		$last = $this->db->query("
+			SELECT report_no
+			FROM report_finalhandling
+			WHERE id_penerimaan = ?
+			ORDER BY id_final DESC
+			LIMIT 1
+		", [$id_penerimaan])->row();
+
+		$this->data['report_no'] = $last ? $last->report_no : $new_report_no;
+
+		$this->data['report'] = $this->m_transaksi->get_report_data_all($id_penerimaan);
+		$this->data['method'] = $this->m_transaksi->get_reportmethod_adidasAll($id_penerimaan, $new_report_no);
+		$this->data['ttd'] = $this->m_transaksi->tampil_ttd()->result();
+
+		if (!$this->data['method']){
+			show_404();
+			return;
+		}
+
+		$this->template->load('layout/template', 'adidas/report/re_rilis.php', $this->data);
+	}*/
+	/*public function index_rilis($id_penerimaan, $report_no)
+	{
+		$this->data['riwayat'] = $this->m_transaksi->getHistoryNo($id_penerimaan);
+		// ⬅️ INI YANG KURANG
+		$this->data['id_penerimaan'] = $id_penerimaan;
+
+		/* ===============================
+		VALIDASI REPORT PERTAMA
+		=============================== 
+		$current = $this->db->query("
+			SELECT report_no, new_report_no
+			FROM report_kualitas
+			WHERE id_penerimaan = ?
+			AND report_no = ?
+			LIMIT 1
+		", [$id_penerimaan, $report_no])->row();
+
+		if (!$current) {
+			show_404();
+			return;
+		}
+
+		$this->data['report_no']     = $current->report_no;
+		$this->data['new_report_no'] = $current->new_report_no; // boleh null
+
+		/* ===============================
+		DATA REPORT
+		=============================== 
+		$this->data['report'] = $this->m_transaksi
+			->get_report_data_all($id_penerimaan, $current->new_report_no);
+
+		$this->data['method'] = $this->m_transaksi
+			->get_reportmethod_adidasAll($id_penerimaan, $current->new_report_no);
+
+		$this->data['ttd'] = $this->m_transaksi
+			->tampil_ttd()
+			->result();
+
+		if (!$this->data['method']) {
+			show_404();
+			return;
+		}
+
+		$this->template->load(
+			'layout/template',
+			'adidas/report/re_rilis.php',
+			$this->data
+		);
+	}*/
+	public function index_rilis($id_penerimaan, $report_no)
+	{
+		$this->data['riwayat'] = $this->m_transaksi->getHistoryNo($id_penerimaan);
+		$this->data['id_penerimaan'] = $id_penerimaan;
+
+		/* ===============================
+		VALIDASI REPORT (MASTER / FINAL)
+		=============================== */
+		$current = $this->db->query("
+			SELECT report_no, new_report_no
+			FROM report_kualitas
+			WHERE id_penerimaan = ?
+			AND (report_no = ? OR new_report_no = ?)
+			LIMIT 1
+		", [$id_penerimaan, $report_no, $report_no])->row();
+
+		if (!$current) {
+			show_404();
+			return;
+		}
+
+		$this->data['report_no']     = $current->report_no;
+		$this->data['new_report_no'] = $current->new_report_no;
+
+		/* ===============================
+		DATA REPORT (PAKAI FINAL)
+		=============================== */
+		$this->data['report'] = $this->m_transaksi
+			->get_report_data_all($id_penerimaan, $current->new_report_no);
+
+		$this->data['method'] = $this->m_transaksi
+			->get_reportmethod_adidasAll($id_penerimaan, $current->new_report_no);
+
+		$this->data['ttd'] = $this->m_transaksi
+			->tampil_ttd()
+			->result();
+
+		if (!$this->data['method']) {
+			$this->data['method'] = []; // biar view aman
+			//$this->data['warning_method'] = true;
+		}
+
+		
+		$this->template->load(
+			'layout/template',
+			'adidas/report/re_rilis.php',
+			$this->data
+		);
+	}
+
+
+	public function update_report($id_reportkualitas, $id_handlingsample)
+	{
+		// Ambil data
+		$data['detail'] = $this->m_transaksi->getReportUpdate($id_reportkualitas, $id_handlingsample)->row();
+		$data['method'] = $this->m_transaksi->getReportMethod($id_reportkualitas);
+
+		// Cek level user
+		$user_level = $this->session->userdata('level');
+
+		// Jika level 10 (barcode user) maka load view khusus
+		if ($user_level == 10) {
+			$this->load->view('adidas/report/update_bc', $data);
+		} else {
+			$this->template->load('layout/template', 'adidas/report/update', $data);
+		}
+	}
+
+	public function simpan_rilis()
+	{
+		$id_penerimaan   = $this->input->post('id_penerimaan');
+		$date_sending    = $this->input->post('date_sending');
+		$jenis_report    = $this->input->post('jenis_report');
+		$signature       = $this->input->post('signature');
+		$review          = $this->input->post('review');
+		$authorized      = $this->input->post('authorized');
+		$comment         = $this->input->post('comment');
+		$remarks         = $this->input->post('remarks');
+		$adding_type     = $this->input->post('adding_type'); // adding | no_adding
+		$input_report_no = $this->input->post('report_no');
+
+		/* ===============================
+		AMBIL RILIS TERAKHIR
+		================================ */
+		$last = $this->db->query("
+			SELECT report_no, new_report_no
+			FROM report_finalhandling
+			WHERE id_penerimaan = ?
+			ORDER BY id_final DESC
+			LIMIT 1
+		", [$id_penerimaan])->row();
+
+		/* ===============================
+		NO ADDING
+		================================ */
+		if ($adding_type === 'no_adding') {
+
+			if ($last) {
+				$report_no     = $last->report_no;
+				$new_report_no = $last->report_no;
+			} else {
+				$report_no     = $input_report_no;
+				$new_report_no = $input_report_no;
+			}
+
+			$next_version = 0;
+		}
+
+		/* ===============================
+		ADDING
+		================================ */
+		else {
+
+			// RILIS PERTAMA
+			if (!$last) {
+
+				$report_no     = $input_report_no;
+				$new_report_no = $input_report_no;
+				$next_version  = 0;
+
+			} else {
+
+				/* ===============================
+				BASE REPORT NO (PERTAMA)
+				================================ */
+				$first = $this->db->query("
+					SELECT report_no
+					FROM report_finalhandling
+					WHERE id_penerimaan = ?
+					ORDER BY id_final ASC
+					LIMIT 1
+				", [$id_penerimaan])->row();
+
+				$base_report_no = $first ? $first->report_no : $input_report_no;
+
+				/* ===============================
+				AMBIL SUFFIX
+				================================ */
+				preg_match('/(-[A-Z]+)$/', $base_report_no, $m);
+				$suffix = $m[1] ?? '';
+
+				/* ===============================
+				BASE TANPA SUFFIX
+				================================ */
+				$base = str_replace($suffix, '', $base_report_no);
+
+				/* ===============================
+				CARI A TERBESAR
+				================================ */
+				$like = "%A%{$suffix}";
+
+				$max = $this->db->query("
+					SELECT MAX(
+						CAST(
+							SUBSTRING_INDEX(
+								SUBSTRING_INDEX(new_report_no, 'A', -1),
+							'-', 1
+						) AS UNSIGNED)
+					) AS max_ver
+					FROM report_finalhandling
+					WHERE id_penerimaan = ?
+					AND new_report_no LIKE ?
+				", [$id_penerimaan, $like])->row();
+
+				$next_version = ($max && $max->max_ver) ? ((int)$max->max_ver + 1) : 1;
+
+				/* ===============================
+				SUSUN NOMOR BARU
+				================================ */
+				$report_no     = $base_report_no;
+				$new_report_no = $base . 'A' . $next_version . $suffix;
+			}
+		}
+
+		/* ===============================
+		INSERT FINAL HANDLING
+		================================ */
+		$data = [
+			'id_penerimaan' => $id_penerimaan,
+			'report_no'     => $report_no,
+			'new_report_no' => $new_report_no,
+			'date_sending'  => $date_sending,
+			'signature'     => $signature,
+			'review'        => $review,
+			'authorized'    => $authorized,
+			'comment_final' => $comment,
+			'remarks_final' => $remarks,
+			'jenis_report'  => $jenis_report
+		];
+
+		$this->db->insert('report_finalhandling', $data);
+
+		/* ===============================
+		UPDATE REPORT KUALITAS
+		================================ */
+		$this->db->where('id_penerimaan', $id_penerimaan);
+
+		/* hanya yang belum rilis */
+		$this->db->where('(rilis IS NULL OR rilis = 0)', null, false);
+
+		/* hanya yang new_report_no masih kosong */
+		$this->db->where('(new_report_no IS NULL OR new_report_no = "")', null, false);
+
+		$this->db->update('report_kualitas', [
+			'new_report_no' => $new_report_no,
+			'rilis'         => ($adding_type === 'adding') ? $next_version : 1
+		]);
+
+		redirect('c_transaksi/index_reportAll');
+	}
+
+	public function get_report_no($id_penerimaan, $reportType)
+	{
+		// Ambil report terakhir berdasarkan id_penerimaan
+		$last = $this->db->query("
+			SELECT report_no 
+			FROM report_finalhandling 
+			WHERE id_penerimaan = ?
+			ORDER BY id_final DESC 
+			LIMIT 1
+		", [$id_penerimaan])->row();
+
+		if ($last) {
+			// Jika sudah ada rilisan, generate new_report_no otomatis
+			if (preg_match('/A(\d+)/', $last->report_no, $m)) {
+				$next = intval($m[1]) + 1;
+				$new_report_no = preg_replace('/A\d+/', "A{$next}", $last->report_no);
+			} else {
+				$new_report_no = str_replace('/AF', 'A1/AF', $last->report_no);
+			}
+		} else {
+			// Rilis pertama
+			$new_report_no = $reportType; // bisa juga gunakan default report_no
+		}
+
+		// Kembalikan dalam format JSON
+		echo json_encode(['report_no' => $new_report_no]);
+	}
+
+
+	//REPORT
+ 	public function fgt($id_penerimaan, $new_report_no)
+	{
+		$this->load->model('M_transaksi');
+
+		/* ===============================
+		DATA REPORT (FILTER BY URL)
+		================================ */
+		$this->data['report'] = $this->M_transaksi->get_report_data_all($id_penerimaan, $new_report_no);
+
+		if (!$this->data['report']) {
+			show_404();
+			return;
+		}
+
+		/* ===============================
+		DATA METHOD (PAKAI new_report_no YANG SAMA)
+		================================ */
+		$this->data['method'] = $this->M_transaksi->get_reportmethod_adidasAll($id_penerimaan, $new_report_no);
+
+		if (!$this->data['method']) {
+			show_404();
+			return;
+		}
+
+		$this->data['title'] = 'FABRIC TEST REPORT';
+		$this->data['no']    = 1;
+
+		/* ===============================
+		DOMPDF
+		================================ */
+		$options = new Options();
+		$options->set('isHtml5ParserEnabled', true);
+		$options->set('isPhpEnabled', true);
+
+		$dompdf = new Dompdf($options);
+		$dompdf->setPaper('A4', 'portrait');
+
+		/* ===============================
+		SUBSCRIPT (A1, A2, dst)
+		================================ */
+		$subscript = '';
+		if (!empty($new_report_no) && preg_match('/A\d+/', $new_report_no, $m)) {
+			$subscript = $m[0]; // A1, A2
+		}
+
+		$this->data['subscript'] = $subscript;
+
+		$html = $this->load->view(
+			'adidas/report/report_rilis/fgt',
+			$this->data,
+			true
+		);
+
+		$dompdf->loadHtml($html);
+		$dompdf->render();
+		$dompdf->stream(
+			'FGT Report ' . date('d F Y'),
+			["Attachment" => false]
+		);
+	}
+
+		public function fgwt($id_penerimaan, $new_report_no)
+		{
+			$this->data['report'] = $this->m_transaksi->get_report_data_all($id_penerimaan, $new_report_no);
+			$this->data['method'] = $this->m_transaksi->get_reportmethod_adidasAll($id_penerimaan, $new_report_no);
+			$this->data['ceklis'] = $this->m_transaksi->get_reportmethod_checklist($id_penerimaan);
+			$this->data['shrinkage'] = $this->m_transaksi->get_reportmethod_shrinkage($id_penerimaan);
+
+			if (!$this->data['method']) {
+				show_404();
+				return;
+			}
+
+			//CARE INSTRUCTION
+			foreach ($this->data['report'] as $r) {
+
+				$care_ids = [
+					$r->washing,
+					$r->bleach,
+					$r->drying,
+					$r->ironing,
+					$r->profess
+				];
+
+				$care_images = [];
+
+				foreach ($care_ids as $id) {
+
+					if (empty($id)) {
+						continue; // kalau kosong skip
+					}
+
+					$care = $this->db->get_where('m_care', ['id_care' => $id])->row();
+
+					if (!$care || empty($care->simbol_care)) {
+						continue; // kalau tidak cocok di DB skip
+					}
+
+					$path = FCPATH . 'images/care_instruction/' . $care->simbol_care;
+
+					if (!file_exists($path)) {
+						continue; // file tidak ada → skip
+					}
+
+					// aman → tambahkan ke array
+					$care_images[] = base64_encode(file_get_contents($path));
+				}
+
+				// jika benar-benar tidak ada gambar → tetap array kosong
+				$r->care_images = $care_images;
+		}
+
+
+    // Set data untuk title dan lainnya
+    $this->data['title'] = 'Finished Garment Wash Test Report';
+    $this->data['no'] = 1;
+
+    // DomPDF
+    $options = new Options();
+    $options->set('isHtml5ParserEnabled', true);
+    $options->set('isPhpEnabled', true);
+
+    $dompdf = new Dompdf($options);
+    $dompdf->setPaper('A4', 'portrait');
+
+			/* ===============================
+		SUBSCRIPT (A1, A2, dst)
+		================================ */
+		$subscript = '';
+		if (!empty($new_report_no) && preg_match('/A\d+/', $new_report_no, $m)) {
+			$subscript = $m[0]; // A1, A2
+		}
+
+		$this->data['subscript'] = $subscript;
+
+    // Load HTML
+    $html = $this->load->view('adidas/report/report_rilis/fgwt', $this->data, true);
+
+    $dompdf->loadHtml($html);
+    $dompdf->render();
+
+    // Output PDF
+    $dompdf->stream('Finished Garment Wash Test Report ' . date('d F Y'), array("Attachment" => false));
+		}
+
+	public function swtr($id_penerimaan, $new_report_no)
+	{
+			$this->data['report'] = $this->m_transaksi->get_report_data_all($id_penerimaan, $new_report_no);
+			$this->data['method'] = $this->m_transaksi->get_reportmethod_adidasAll($id_penerimaan, $new_report_no);
+			$this->data['ceklis'] = $this->m_transaksi->get_reportmethod_checklist($id_penerimaan);
+			$this->data['shrinkage'] = $this->m_transaksi->get_reportmethod_shrinkage($id_penerimaan);
+
+					if (!$this->data['method']) {
+						show_404();
+						return;
+					}
+
+					//CARE INSTRUCTION
+					foreach ($this->data['report'] as $r) {
+
+						$care_ids = [
+							$r->washing,
+							$r->bleach,
+							$r->drying,
+							$r->ironing,
+							$r->profess
+						];
+
+						$care_images = [];
+
+						foreach ($care_ids as $id) {
+
+							if (empty($id)) {
+								continue; // kalau kosong skip
+							}
+
+							$care = $this->db->get_where('m_care', ['id_care' => $id])->row();
+
+							if (!$care || empty($care->simbol_care)) {
+								continue; // kalau tidak cocok di DB skip
+							}
+
+							$path = FCPATH . 'images/' . $care->simbol_care;
+
+							if (!file_exists($path)) {
+								continue; // file tidak ada → skip
+							}
+
+							// aman → tambahkan ke array
+							$care_images[] = base64_encode(file_get_contents($path));
+						}
+
+						// jika benar-benar tidak ada gambar → tetap array kosong
+						$r->care_images = $care_images;
+				}
+
+
+			// Set data untuk title dan lainnya
+			$this->data['title'] = 'Sock Wash Test Report';
+			$this->data['no'] = 1;
+
+			// DomPDF
+			$options = new Options();
+			$options->set('isHtml5ParserEnabled', true);
+			$options->set('isPhpEnabled', true);
+
+			$dompdf = new Dompdf($options);
+			$dompdf->setPaper('A4', 'portrait');
+
+			/* ===============================
+			SUBSCRIPT (A1, A2, dst)
+			================================ */
+			$subscript = '';
+			if (!empty($new_report_no) && preg_match('/A\d+/', $new_report_no, $m)) {
+				$subscript = $m[0]; // A1, A2
+			}
+
+			$this->data['subscript'] = $subscript;
+
+			// Load HTML
+			$html = $this->load->view('adidas/report/report_rilis/swtr', $this->data, true);
+
+			$dompdf->loadHtml($html);
+			$dompdf->render();
+
+			// Output PDF
+			$dompdf->stream('Sock Wash Test Report ' . date('d F Y'), array("Attachment" => false));
+	}
+		public function ftrf($id_penerimaan, $new_report_no)
+		{
+			$this->data['report'] = $this->m_transaksi->get_report_data_all($id_penerimaan,  $new_report_no);
+			//$this->data['handling'] = $this->m_transaksi->get_report_data_adidas($id_penerimaan); 
+			$this->data['method'] = $this->m_transaksi-> get_reportmethod_adidasAll($id_penerimaan, $new_report_no);
+
+			if (!$this->data['method']){
+				show_404();
+				return;
+			}
+
+			// Set data untuk title dan lainnya
+			$this->data['title'] = 'FABRIC TEST REPORT';
+			$this->data['no'] = 1; // Ini bisa diubah sesuai kebutuhan
+
+			// Menyiapkan Dompdf
+			$options = new Options();
+			$options->set('isHtml5ParserEnabled', true);
+			$options->set('isPhpEnabled', true); // Enable PHP in HTML (Jika diperlukan)
+
+			// Inisialisasi Dompdf dengan options
+			$dompdf = new Dompdf($options);
+
+			$dompdf->setPaper('A4', 'portrait'); // Set ukuran kertas
+
+			
+			/* ===============================
+			SUBSCRIPT (A1, A2, dst)
+			================================ */
+			$subscript = '';
+			if (!empty($new_report_no) && preg_match('/A\d+/', $new_report_no, $m)) {
+				$subscript = $m[0]; // A1, A2
+			}
+
+			$this->data['subscript'] = $subscript;
+
+			// Muat view HTML untuk laporan
+			$html = $this->load->view('adidas/report/report_rilis/ftrf', $this->data, true);
+
+			// Load HTML ke Dompdf dan render
+			$dompdf->loadHtml($html);
+			$dompdf->render();
+
+			// Mengunduh atau menampilkan hasil PDF
+			$dompdf->stream('FGT Report ' . date('d F Y'), array("Attachment" => false)); // Tampilkan PDF di browser
+		}
+		public function ftr($id_penerimaan, $new_report_no)
+		{
+			$this->data['report'] = $this->m_transaksi->get_report_data_all($id_penerimaan, $new_report_no);
+			//$this->data['handling'] = $this->m_transaksi->get_report_data_adidas($id_penerimaan); 
+			$this->data['method'] = $this->m_transaksi-> get_reportmethod_adidasAll($id_penerimaan, $new_report_no);
+
+			if (!$this->data['method']){
+				show_404();
+				return;
+			}
+
+			// Set data untuk title dan lainnya
+			$this->data['title'] = 'FABRIC TEST REPORT';
+			$this->data['no'] = 1; // Ini bisa diubah sesuai kebutuhan
+
+			// Menyiapkan Dompdf
+			$options = new Options();
+			$options->set('isHtml5ParserEnabled', true);
+			$options->set('isPhpEnabled', true); // Enable PHP in HTML (Jika diperlukan)
+
+			// Inisialisasi Dompdf dengan options
+			$dompdf = new Dompdf($options);
+
+			$dompdf->setPaper('A4', 'portrait'); // Set ukuran kertas
+
+			
+			/* ===============================
+			SUBSCRIPT (A1, A2, dst)
+			================================ */
+			$subscript = '';
+			if (!empty($new_report_no) && preg_match('/A\d+/', $new_report_no, $m)) {
+				$subscript = $m[0]; // A1, A2
+			}
+
+			$this->data['subscript'] = $subscript;
+
+			// Muat view HTML untuk laporan
+			$html = $this->load->view('adidas/report/report_rilis/ftr', $this->data, true);
+
+			// Load HTML ke Dompdf dan render
+			$dompdf->loadHtml($html);
+			$dompdf->render();
+
+			// Mengunduh atau menampilkan hasil PDF
+			$dompdf->stream('FGT Report ' . date('d F Y'), array("Attachment" => false)); // Tampilkan PDF di browser
+		}
+		public function ttr1($id_penerimaan, $new_report_no)
+		{
+			$this->data['report'] = $this->m_transaksi->get_report_data_all($id_penerimaan, $new_report_no);
+			//$this->data['handling'] = $this->m_transaksi->get_report_data_adidas($id_penerimaan); 
+			$this->data['method'] = $this->m_transaksi-> get_reportmethod_adidasAll($id_penerimaan, $new_report_no);
+
+			if (!$this->data['method']){
+				show_404();
+				return;
+			}
+
+			// Set data untuk title dan lainnya
+			$this->data['title'] = 'TRIM TEST REPORT';
+			$this->data['no'] = 1; // Ini bisa diubah sesuai kebutuhan
+
+			// Menyiapkan Dompdf
+			$options = new Options();
+			$options->set('isHtml5ParserEnabled', true);
+			$options->set('isPhpEnabled', true); // Enable PHP in HTML (Jika diperlukan)
+
+			// Inisialisasi Dompdf dengan options
+			$dompdf = new Dompdf($options);
+
+			$dompdf->setPaper('A4', 'portrait'); // Set ukuran kertas
+
+			
+			/* ===============================
+			SUBSCRIPT (A1, A2, dst)
+			================================ */
+			$subscript = '';
+			if (!empty($new_report_no) && preg_match('/A\d+/', $new_report_no, $m)) {
+				$subscript = $m[0]; // A1, A2
+			}
+
+			$this->data['subscript'] = $subscript;
+
+			// Muat view HTML untuk laporan
+			$html = $this->load->view('adidas/report/report_rilis/ttr1', $this->data, true);
+
+			// Load HTML ke Dompdf dan render
+			$dompdf->loadHtml($html);
+			$dompdf->render();
+
+			// Mengunduh atau menampilkan hasil PDF
+			$dompdf->stream('TRIM TEST REPORT ' . date('d F Y'), array("Attachment" => false)); // Tampilkan PDF di browser
+		}
+		public function ttr2($id_penerimaan, $new_report_no)
+		{
+			$this->data['report'] = $this->m_transaksi->get_report_data_all($id_penerimaan, $new_report_no);
+			//$this->data['handling'] = $this->m_transaksi->get_report_data_adidas($id_penerimaan); 
+			$this->data['method'] = $this->m_transaksi-> get_reportmethod_adidasAll($id_penerimaan, $new_report_no);
+
+			if (!$this->data['method']){
+				show_404();
+				return;
+			}
+
+			// Set data untuk title dan lainnya
+			$this->data['title'] = 'TRIM TEST REPORT';
+			$this->data['no'] = 1; // Ini bisa diubah sesuai kebutuhan
+
+			// Menyiapkan Dompdf
+			$options = new Options();
+			$options->set('isHtml5ParserEnabled', true);
+			$options->set('isPhpEnabled', true); // Enable PHP in HTML (Jika diperlukan)
+
+			// Inisialisasi Dompdf dengan options
+			$dompdf = new Dompdf($options);
+
+			$dompdf->setPaper('A4', 'portrait'); // Set ukuran kertas
+
+			
+			/* ===============================
+			SUBSCRIPT (A1, A2, dst)
+			================================ */
+			$subscript = '';
+			if (!empty($new_report_no) && preg_match('/A\d+/', $new_report_no, $m)) {
+				$subscript = $m[0]; // A1, A2
+			}
+
+			$this->data['subscript'] = $subscript;
+
+			// Muat view HTML untuk laporan
+			$html = $this->load->view('adidas/report/report_rilis/ttr2', $this->data, true);
+
+			// Load HTML ke Dompdf dan render
+			$dompdf->loadHtml($html);
+			$dompdf->render();
+
+			// Mengunduh atau menampilkan hasil PDF
+			$dompdf->stream('TRIM TEST REPORT ' . date('d F Y'), array("Attachment" => false)); // Tampilkan PDF di browser
+		}
+
+		public function get_test_required($id_penerimaan)
+		{
+			$data['tests'] = $this->m_transaksi
+				->getTestRequiredByPenerimaan($id_penerimaan)
+				->result();
+
+			$this->load->view('adidas/kualitas/_list_test_required', $data);
+		}
+
+		public function deleteReportHandling()
+		{
+			$id_handlingsample = $this->input->post('id_handlingsample');
+
+			if (!$id_handlingsample) {
+				echo json_encode([
+					'status' => false,
+					'message' => 'ID Handling Sample tidak ditemukan'
+				]);
+				return;
+			}
+
+			$result = $this->m_transaksi->deleteReportHandling($id_handlingsample);
+
+			echo json_encode([
+				'status' => $result,
+				'message' => $result ? 'Data berhasil dihapus' : 'Gagal menghapus data'
+			]);
+		}
+
 }

@@ -1,15 +1,122 @@
 <style>
-.dataTables_filter{
-display:block;
-float:right;
-}
- </style>
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 14px;
+        background-color: #f8f9fa;
+    }
+
+    .card {
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border-radius: 10px;
+        border: none;
+    }
+
+    .card-header {
+        background-color: #36454F !important;
+        color: white;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+    }
+
+    h4 {
+        font-weight: 600;
+        color: #36454F;
+        margin-top: 10px;
+    }
+
+    h4 hr {
+        border-top: 2px solid #ccc;
+        margin-top: 5px;
+    }
+
+    label {
+        font-weight: 500;
+        color: #444;
+        margin-bottom: 5px;
+    }
+
+    input.form-control,
+    select.form-control {
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        transition: border-color 0.3s, box-shadow 0.3s;
+        box-shadow: none;
+    }
+
+    input.form-control:focus,
+    select.form-control:focus {
+        border-color: #36454F;
+        box-shadow: 0 0 0 0.1rem rgba(54, 69, 79, 0.25);
+    }
+
+    .btn {
+        border-radius: 6px;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn:hover {
+        opacity: 0.9;
+    }
+
+    .breadcrumb {
+        background-color: transparent;
+        font-size: 13px;
+        padding: 0;
+        margin-bottom: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-control[readonly] {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+
+    .containerColor .form-control,
+    .containerOf .form-control {
+        margin-bottom: 10px;
+    }
+
+    .btn-tambah, .btn-hapus-of {
+        background-color: #6c757d !important;
+        color: white;
+    }
+
+    .btn-tambah:hover, .btn-hapus-of:hover {
+        background-color: #5a6268 !important;
+    }
+
+    .input-group label {
+        font-weight: 500;
+        margin-right: 10px;
+        margin-top: 5px;
+    }
+
+    .custom-file input[type="file"] {
+        padding: 5px;
+        font-size: 13px;
+    }
+
+    .pl-pr-1 {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .card-footer {
+        background-color: #f1f1f1;
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+    }
+</style>
+
 <div class="content-header">
       <div class="container-fluid">
         <div class="row mb-2">
           <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-left">
-                <li class="breadcrumb-item"><a href="#">Handling Sample</a></li>
+                <li class="breadcrumb-item"><a href="#">Sample Monitoring</a></li>
                 <li class="breadcrumb-item active">Test Requisition Form</li>
                 </ol>
           </div>
@@ -18,12 +125,8 @@ float:right;
 </div>
 <section class="content">
     <div class="container-fluid">
-        <div class="row">
+            <div class="row">
             <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header" style="background-color: #36454F;" >
-                        <h3 class="card-title"></h3>
-                    </div>
                         <form action = "<?php echo site_url('c_transaksi/tambahaksi_penerimaan'); ?>" method="post" enctype="multipart/form-data" > 
                             <div class="card-body">
                                 <div class="col-md-12">
@@ -74,7 +177,7 @@ float:right;
                                         <div class="form-group ">
                                             <label>Date Time Received</label>
                                             <input type="hidden" name="id_penerimaan" class="form-control" value="<?php echo $idPenerimaan ?>" >
-                                            <input type="datetime-local" name="datetime_received" class="form-control">
+                                            <input type="datetime-local" name="datetime_received" class="form-control" Required>
                                         </div>
                                     </div>
                                     <div class="col-md-12">
@@ -87,7 +190,7 @@ float:right;
                                 <div class="col-md-12">
                                     <h4><br>Sample Information<hr></h4>
                                 </div>
-                                <div class="col-md-5">
+                                <div class="col-md-4">
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Sample Description</label>
@@ -97,14 +200,26 @@ float:right;
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Batch / LOT Number</label>
-                                            <input type="text" name="batch_lot" class="form-control">
+                                            <input type="text" name="batch_lot" id="batch_lot" class="form-control">
                                         </div>
                                     </div>
-                                    <div class="col-md-12">
+                                   <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Order Number / PO - LCO</label>
-                                            <input type="text" name="order_number" class="form-control">
+                                            <select name="order_number" id="order_number" class="form-control select2" style="width: 100%;">
+                                                <option selected disabled value="">--- Select Order Number ---</option>
+                                                <?php foreach($order as $u): ?>
+                                                    <option value="<?= $u->order_number ?>"><?= $u->order_number ?></option>
+                                                <?php endforeach ?>
+                                                <option value="other">Other</option>
+                                            </select>
                                         </div>
+                                         <input type="text"
+                                                    id="other_order_number"
+                                                    name="other_order_number"
+                                                    class="form-control"
+                                                    style="display:none;"
+                                                    placeholder="Masukkan order number lainnya...">
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
@@ -115,63 +230,63 @@ float:right;
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Initial Width (LA)</label>
-                                            <input type="text" name="initial_width" class="form-control">
+                                            <input type="text" name="initial_width" id="initial_width" class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Request Width (LP)</label>
-                                            <input type="text" name="request_width" class="form-control">
+                                            <input type="text" name="request_width" id="request_width" class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Finished Width (LJ)</label>
-                                            <input type="text" name="finished_width" class="form-control">
+                                            <input type="text" name="finished_width" id="finished_width" class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Request Fabric Weight</label>
-                                            <input type="text" name="request_fabric" class="form-control">
+                                            <input type="text" name="request_fabric" id="request_fabric" class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Finished Fabric Weight</label>
-                                            <input type="text" name="finish_fabric" class="form-control">
+                                            <input type="text" name="finish_fabric" id="initial_width" class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
                                     <div class="form-group">
                                         <label>ERP Dyeing Number</label>
-                                        <input type="text" name="dyeing_number" class="form-control">
+                                        <input type="text" name="dyeing_number" id="dyeing_number" class="form-control">
                                     </div>
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>ERP Production Number</label>
-                                            <input type="text" name="production_number" class="form-control">
+                                            <input type="text" name="production_number" id="production_number" class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Country Of Destination</label>
-                                            <input type="text" name="country_destination" class="form-control">
+                                            <input type="text" name="country_destination" id="country_destination" class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Product End Use</label>
-                                            <input type="text" name="product_end" class="form-control">
+                                            <input type="text" name="product_end" id="product_end" class="form-control">
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-5">
+                                <div class="col-md-4">
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Article No</label>
-                                            <input type="text" name="article_no" class="form-control">
+                                            <input type="text" name="article_no" id="article_no" class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
@@ -188,13 +303,13 @@ float:right;
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Style No</label>
-                                            <input type="text" name="style_no" class="form-control">
+                                            <input type="text" name="style_no" id="working_number" class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Season</label>
-                                            <input type="text" name="season" class="form-control">
+                                            <input type="text" name="season" id="season"  class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
@@ -226,13 +341,13 @@ float:right;
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Size</label>
-                                            <input type="text" name="size" class="form-control">
+                                            <input type="text" name="size" id="size" class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Brands</label>
-                                            <input type="text" name="brands" class="form-control">
+                                            <input type="text" name="brands" id="brand" class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
@@ -271,7 +386,7 @@ float:right;
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-md-4">
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Number Of Sample</label>
@@ -287,9 +402,56 @@ float:right;
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Time Of Delivery (TOD)</label>
-                                            <input type="text" name="tod" class="form-control">
+                                            <input type="text" name="tod" id="tod" class="form-control">
                                         </div>
                                     </div>
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label>PODD</label>
+                                            <input type="text" name="podd" id="podd" class="form-control">
+                                        </div>
+                                    </div>
+                                     <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label>PO Quantity</label>
+                                            <input type="text" name="po_quantity" id="po_quantity" class="form-control">
+                                        </div>
+                                    </div>
+                                     <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label>LCO</label>
+                                            <input type="text" name="lco" id="lco" class="form-control">
+                                        </div>
+                                    </div>
+                                     <div class="col-md-12">
+                                            <div class="form-group">
+                                                <label>Product Type</label>
+                                                <select class="form-control" name="id_producttype" id="id_producttype" >
+                                                    <option selected disabled>Select</option>
+                                                    <?php foreach ($producttype as $u): ?>
+                                                        <option value="<?= $u->id_producttype?>"><?= $u->product_type ?></option>
+                                                    <?php endforeach ?>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <div class="form-group">
+                                                <label>Testing Request</label>
+                                                <select class="form-control" name="id_testingregulation" id="id_testingregulation">
+                                                    <option selected disabled>Select</option>
+                                                    <?php foreach ($regulation as $u): ?>
+                                                        <option value="<?= $u->id_testingregulation?>"><?= $u->testing_regulation ?></option>
+                                                    <?php endforeach ?>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <div class="form-group">
+                                                <label>Factory Disclaimer</label>
+                                                <input type="text" name="factory_discleamer" id="factory_discleamer" class="form-control">
+                                            </div>
+                                        </div>
+                                        
                                 </div>
                                 <div class="col-md-12">
                                     <div class="form-group containerColor">
@@ -824,14 +986,14 @@ float:right;
                                             <div class="input-group">
                                                 <label>Upload Specimen</label>&nbsp;&nbsp;
                                                 <div class="custom-file">
-                                                    <input type="file" name="image_path" accept="image/*" >
+                                                    <input type="file" name="image_path" accept="image/*"  onchange="cekUkuranFile(this)">
                                                 </div>
                                             </div>
                                         </div> 
                             </div>
                             <div class="card-footer">
                                 <div class="col-md-1">
-                                        <a href="<?=site_url('c_method/index_ttd')?>" type="button" class="btn btn-block" style="background-color: #36454F;color: white;" >Back</a> 
+                                        <a href="<?=site_url('c_transaksi/index_penerimaan')?>" type="button" class="btn btn-block" style="background-color: #36454F;color: white;" >Back</a> 
                                 </div>
                                 <div class="col-md-10">
                                     
@@ -843,7 +1005,6 @@ float:right;
                                 </div>      
                             </div>
                         </form>
-                    </div>
             </div>
 		</div>
 	</div>

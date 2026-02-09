@@ -3,7 +3,6 @@
     <head>
         <title>Finished Garment Functional Test</title>
         <?php require_once('/xampp/htdocs/handlingsample/application/views/layout/_css.php'); ?>
-
         <style>
             @page { margin: 30px 5px; border: 0px; }
             header { position: fixed; top: -60px; left: 0px; right: 0px; background-color: none; height: 50px; }
@@ -23,7 +22,6 @@
             <header>
                 <h1 style="font-size: 16px; font-weight: bolder; font-family: calibri; padding-left: 37%; padding-top: 6%;">FABRIC TEST REPORT</h1>
             </header>
-
             <!-- Table for Report Data -->
             <table class="table table-border" style="font-size: 10px; font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; padding-left: 3%; padding-top: 1%; padding-right: 2%;">
                 <tr>
@@ -54,7 +52,7 @@
                     <td colspan="3">MATERIAL SPECIFICATION</td>
                 </tr>
                 <tr>
-                    <td colspan="3">Testing Type : <?= isset($handling) && $handling ? $handling->stage : 'N/A' ?></td>
+                    <td colspan="3">Testing Type : <?= isset($handling) && $handling ? $handling->testing_stages : 'N/A' ?></td>
                 </tr>
                 <tr>
                     <td>Material Supplier : <?= isset($handling) && $handling ? $handling->supplier_name : 'N/A' ?></td>
@@ -67,7 +65,13 @@
                     <td>AOP CCN : </td>
                 </tr>
                 <tr>
-                    <td>Supplier Ref :  </td>
+                    <td>Supplier Ref : 
+                        <?= isset($handling) && isset($handling->supplier_name) && isset($handling->supplier_code) 
+                            ? "{$handling->supplier_name} - {$handling->supplier_code}" 
+                            : 'N/A' ?>
+                    </td>
+
+
                     <td>Construction/Finish:</td>
                     <td>Hangtag : </td>
                 </tr>
@@ -105,10 +109,49 @@
                         <td><center><?= $u['fabric_tech'] ?></td>
                         <td><center><?= $u['composition']?></td>
                         <td><?= $u['title']?></td>
-                        <td><?= $u['remakrs']?><br><b>Value From :</b>  <?= $u['value_from'] ?></td>
-                        <td><?= $u['result']?></td>
-                        <td><?= $u['uom']?></td>
-                        <td><?= $u['result_status']?></td>
+                        <td><?= $u['remakrs']?><br><b>Value From :</b>  <?= $u['value_from'] ?><br><b>Value To :</b><?= $u['value_to']?></td>
+                        <td><center>
+                            <?php
+                                // Jika ada beberapa baris sub-test, loop masing-masing
+                                $report_id = $u['id_reportkualitas'];
+                                $subtests = $this->db->get_where('report_kualitas', ['id_reportkualitas' => $report_id, 'id_testmatrix' => $u['id_testmatrix']])->result_array();
+
+                                foreach($subtests as $r){
+                                    // result selalu tampil
+                                    echo '<b>'.$r['result'].'</b> ';
+
+                                    if(!empty($r['comment']) && $r['comment'] !== '-'){
+                                        echo $r['comment'].' ';
+                                    }
+
+                                    if(!empty($r['statement']) && $r['statement'] !== '-'){
+                                        echo $r['statement'].' ';
+                                    }
+
+                                    echo '<br>';
+                                }
+                            ?>
+                        </td>
+                        <td><center><?= $u['uom']?></td>
+                        <td>
+                            <?php
+                            $items = [
+                                $u['result_status'],
+                                $u['status_numeric'],
+                                $u['status_statement_result'],
+                                $u['status_boolean'],
+                                $u['status_shrinkage']
+                            ];
+
+                            // Filter khusus PDF: buang null, kosong, dan tanda "-"
+                            $items = array_filter($items, function($v){
+                                return trim($v) !== '' && trim($v) !== '-' && $v !== null;
+                            });
+
+                            // GABUNG → tanpa karakter aneh
+                            echo implode(' ', $items);
+                            ?>
+                        </td>
                     </tr>
                     <?php } ?>
                 </tbody> 

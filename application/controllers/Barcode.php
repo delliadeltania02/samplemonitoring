@@ -14,7 +14,7 @@ class Barcode extends CI_Controller {
 
     if (!$this->session->userdata('user_logged_in')) {
         // 🟢 INI WAJIB ADA
-        $this->session->set_userdata('redirect_after_login', site_url('c_transaksi/index_bcKualitas/' . $report_no));
+        $this->session->set_userdata('redirect_after_login', base_url('index.php/c_transaksi/index_bcKualitas/' . $report_no));
         
 
         // ⬅️ Login page untuk QR

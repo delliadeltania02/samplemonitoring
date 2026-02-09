@@ -1,17 +1,24 @@
 
-<aside class="main-sidebar sidebar-dark-primary elevation-4">
+<aside class="main-sidebar modern-sidebar">
   <div class="sidebar">
-        <!-- Sidebar user panel (optional) -->
-        <div class="user-panel mt-3 pb-3 mb-3 d-flex">
-          <div class="image">
-            <img src="<?php echo base_url('assets');?>/dist/img/kaha.png" class="img-circle elevation-2" alt="User Image">
-          </div>
-          <div class="info">
-            <a href="#" class="d-block">PT KAHATEX</a>
-          </div>
-        </div>
+    <!-- Sidebar user panel (optional) -->
+   <div class="user-panel d-flex align-items-center px-3 py-3" 
+     style="background: #fff; border-radius: 20px; margin: 0px 2px 2px 2px;">
+      <div class="image">
+        <img src="<?php echo base_url('assets-fe/img/kaha.png'); ?>" 
+            class="img-circle elevation-2"
+            alt="User Image"
+            style="width: 45px; height: 45px; object-fit: cover;">
+      </div>
+      <div class="info ms-3">
+        <span class="d-block fw-bold" style="font-size: 16px; color:#0a3456;">
+        LABORATORIUM
+        </span>
+      </div>
+    </div>
+
     <!-- SidebarSearch Form -->
-        <div class="form-inline">
+        <div class="form-inline" hidden>
           <div class="input-group" data-widget="sidebar-search">
             <input class="form-control form-control-sidebar" type="search" placeholder="Search" aria-label="Search">
         
@@ -38,6 +45,14 @@
               </a>
               </li>
               <li class="nav-item">
+              <a href="<?=site_url('c_transaksi/index_order')?>" class="nav-link">
+                <i class="nav-icon fas fa-box"></i>
+                <p>
+                  Data Order
+                </p>
+              </a>
+              </li>
+              <li class="nav-item">
                   <a href="#" class="nav-link">
                     <i class="nav-icon fas fa-circle"></i>
                     <p>
@@ -46,6 +61,30 @@
                     </p>
                   </a>
                   <ul class="nav nav-treeview">
+                    <!---TEST MATRIX--->
+                  <li class="nav-item">
+                     <a href="#" class="nav-link">
+                      <i class="nav-icon fas fa-circle"></i>
+                      <p>
+                        Test Matrix
+                        <i class="right fas fa-angle-left"></i>
+                      </p>
+                    </a>
+                      <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                          <a href="<?=site_url('testMatrix/indexMethod')?>" class="nav-link">
+                            <i class="far fa-dot-circle nav-icon"></i>
+                            <p>Test Method</p>
+                          </a>
+                        </li>
+                        <li class="nav-item">
+                          <a href="<?=site_url('testMatrix/indexMatrix')?>" class="nav-link">
+                            <i class="far fa-dot-circle nav-icon"></i>
+                            <p>Test Matrix</p>
+                          </a>
+                        </li>
+                      </ul>
+                  </li>
                   <li class="nav-item">
                     <a href="<?=site_url('c_transaksi/index_supplier')?>" class="nav-link">
                       <i class="far fa-dot-circle nav-icon"></i>
@@ -145,14 +184,48 @@
                     </li>
                   </ul>
             </li>
-           
             <li class="nav-item">
-              <a href="<?=site_url('c_transaksi/index_user')?>" class="nav-link">
-                <i class="nav-icon fa fa-users"></i>
-                <p>
-                  User Management
-                </p>
-              </a>
+                     <a href="#" class="nav-link">
+                      <i class="nav-icon fas fa-circle"></i>
+                      <p>
+                        System
+                        <i class="right fas fa-angle-left"></i>
+                      </p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                          <li class="nav-item">
+                            <a href="<?=site_url('c_transaksi/index_user')?>" class="nav-link">
+                              <i class="nav-icon fa fa-users"></i>
+                              <p>
+                                Account
+                              </p>
+                            </a>
+                          </li>
+                          <li class="nav-item" hidden>
+                            <a href="<?=site_url('c_transaksi/index_user')?>" class="nav-link">
+                              <i class="nav-icon fa fa-users"></i>
+                              <p>
+                                Level Access
+                              </p>
+                            </a>
+                          </li>
+                          <li class="nav-item" hidden>
+                            <a href="<?=site_url('c_transaksi/index_user')?>" class="nav-link">
+                              <i class="nav-icon fa fa-users"></i>
+                              <p>
+                                Change Password
+                              </p>
+                            </a>
+                          </li>
+                          <li class="nav-item" hidden>
+                            <a href="<?=site_url('c_transaksi/index_user')?>" class="nav-link">
+                              <i class="nav-icon fa fa-users"></i>
+                              <p>
+                                Log Activity
+                              </p>
+                            </a>
+                          </li>
+                      </ul>
             </li>
             <?php } if ($this->session->userdata('bg_idlvl')=='2') { ?>
               <li class="nav-item">

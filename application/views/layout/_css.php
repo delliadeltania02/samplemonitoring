@@ -65,6 +65,88 @@
   <!-- Theme style -->
   <link rel="stylesheet" href="<?php echo base_url('assets');?>/dist/css/adminlte.min.css">
 
+ <style>
+  body.sidebar-collapse .main-sidebar {
+  width: 0 !important;
+  overflow: hidden;
+  }
+
+  body.sidebar-collapse .main-header,
+  body.sidebar-collapse .content-wrapper,
+  body.sidebar-collapse .main-footer {
+    transition: none !important;
+    margin-left: 0 !important;
+  }
+
+
+  /* Sidebar dengan gaya modern dan background abu */
+  .modern-sidebar {
+    width: 240px;
+    height: 100vh;
+    background-color: #e5e5e5; /* abu terang */
+    font-family: "Poppins", sans-serif;
+    color: #333;
+    padding-top: 10px;
+    position: fixed;
+    border-right: 1px solid #d1d1d1;
+    transition: all 0.3s ease-in-out;
+  }
+
+  .modern-sidebar .user-panel {
+    display: flex;
+    align-items: center;
+    padding: 20px 20px;
+    background: #fff;
+    border-radius: 20px;
+    margin: 0 15px 20px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+  }
+
+  .modern-sidebar .user-panel .image img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+
+  .modern-sidebar .user-panel .info {
+    margin-left: 10px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .modern-sidebar .nav-sidebar .nav-link {
+    color: #555;
+    font-size: 15px;
+    border-radius: 12px;
+    margin: 5px 15px;
+    transition: all 0.3s;
+    font-weight: 500;
+  }
+
+  .modern-sidebar .nav-sidebar .nav-link:hover,
+  .modern-sidebar .nav-sidebar .nav-link.active {
+    background-color: #dcdcdc; /* abu sedikit lebih gelap */
+    color: #000;
+  }
+
+  .modern-sidebar .nav-icon {
+    color: #777;
+    margin-right: 8px;
+  }
+
+  .modern-sidebar .nav-treeview {
+    padding-left: 20px;
+  }
+
+  .modern-sidebar .form-control-sidebar {
+    border-radius: 15px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    margin: 0 15px;
+    padding: 6px 8px;
+  }
+
+ </style>
   <style>
  
  /* Style the tab */
@@ -105,4 +187,5 @@
  .select2 {
 width:100%!important;
 }
- </style>
+
+</style>

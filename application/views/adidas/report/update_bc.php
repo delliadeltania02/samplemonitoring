@@ -2,11 +2,8 @@
 <html lang="en">
     <head>
     <?php require_once(__DIR__ . '/../../layout/_meta.php'); ?>
-
-
-    <title>Handling Sample</title>
+    <title>Sample Monitoring</title>
     <?php require_once(__DIR__ . '/../../layout/_css.php'); ?>
-    
     </head>
     <body style="background-color:#fffffe ;">
         <?php require_once(__DIR__ . '/../../layout-fe/_header.php'); ?>
@@ -249,7 +246,6 @@
                 </div>
             </div>                
         </div>
-        <?php require_once(__DIR__ . '/../../layout/_js.php'); ?>
-      
+        <?php require_once(__DIR__ . '/../../layout/_js.php'); ?>  
     </body>
 </html>

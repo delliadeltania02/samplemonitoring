@@ -54,11 +54,17 @@ float:right;
                             ?>
                                 <td><?= $no++ ?> </td>
                                 <td><?= $u->kategori_care ?></td>
-                                <td><center><img width='40%' src="http://localhost/testresult/images/<?= $u->simbol_care ?>" alt=""></td>
+                                <td><center><img width='40%' src="http://localhost/samplemonitoring/images/care_instruction/<?= $u->simbol_care ?>" alt=""></td>
                                 <td><?= $u->deskripsi ?></td>
                                 <td><center>
-                                <button href="<?=site_url('c_transaksi/edit_buyer/').$u->id_care?>" class="btn btn-sm" style="font-size: 11px; background-color: #36454F;color: white;" disabled><i class="fa fa-edit"></i></a>
-                                <button href="<?=site_url('c_transaksi/delete_buyer/').$u->id_care?>" onclick="return confirm('Apakah Anda Yakin Ingin Menghapus <?php echo $u->deskripsi?>?');" class="btn btn-sm remove" style="font-size: 11px; background-color: #36454F;color: white;" disabled><i class="fa fa-trash"></i></>
+                                <a href="<?=site_url('c_transaksi/edit_care/').$u->id_care?>" class="btn btn-sm" style="font-size: 11px; background-color: #36454F;color: white;"><i class="fa fa-edit"></i></a>&nbsp;
+                                <a 
+                                    href="<?= site_url('c_transaksi/delete_care/' . $u->id_care) ?>"
+                                    onclick="return confirm('Apakah Anda yakin ingin menghapus <?= htmlspecialchars($u->deskripsi) ?>?');"
+                                    class="btn btn-sm"
+                                    style="font-size:11px; background-color:#36454F; color:white;"
+                                ><i class="fa fa-trash"></i>
+                                </a>
                                 </td>
                             </tr>
                             <?php } ?>

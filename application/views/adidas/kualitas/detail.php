@@ -1,29 +1,95 @@
 <style>
-.dataTables_filter{
-display:block;
-float:right;
+body {
+  background-color: #f8f9f7; /* broken white */
 }
- </style>
+.card {
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  border-radius: 10px;
+  border: none;
+  background-color: #ffffff; /* white card on broken white */
+}
+.card-header {
+  background: #2c3e50; /* charcoal/navy blend */
+  color: white;
+  font-weight: 500;
+  font-size: 14px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+  border-radius: 30px;
+  transition: all 0.3s ease-in-out;
+}
+.btn-sm i {
+  margin-right: 4px;
+}
+.btn-modern {
+  background: linear-gradient(to right, #2c3e50, #1c2833); /* charcoal to navy */
+  color: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  border: none;
+}
+.btn-modern:hover {
+  background: linear-gradient(to right, #1c2833, #0f1a21);
+  color: #fff;
+}
+.table-wrapper {
+  background: none;
+  padding: 0;
+  box-shadow: none;
+  overflow-x: auto;
+}
+.dataTables_wrapper .dataTables_filter {
+  text-align: right;
+  padding-right: 10px;
+  margin-top: 0;
+}
+.dataTables_wrapper .dataTables_length {
+  padding-left: 10px;
+  margin-top: 10px;
+}
+table.dataTable thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f1f3f2; /* soft broken white */
+  z-index: 2;
+  font-size: 13px;
+  white-space: nowrap;
+}
+table.dataTable td {
+  font-size: 12px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+table.dataTable td img {
+  max-height: 40px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  margin: auto;
+  border-radius: 6px;
+}
+.table td, .table th {
+  padding: 6px 10px;
+}
+</style>
 <div class="content-header">
-      <div class="container-fluid">
-        <div class="row mb-2">
-          <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-left">
-                <li class="breadcrumb-item"><a href="#">Handling Sample</a></li>
-                <li class="breadcrumb-item active">Edit Sample</li>
-                </ol>
-          </div>
-        </div>
+  <div class="container-fluid">
+    <div class="row mb-1">
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-left">
+          <li class="breadcrumb-item"><a href="#">Sample Monitoring</a></li>
+          <li class="breadcrumb-item active">Detail Sample</li>
+        </ol>
       </div>
+    </div>
+  </div>
 </div>
 <section class="content">
     <div class="container-fluid">
         <div class="row">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header" style="background-color: #36454F;" >
-                        <h3 class="card-title"></h3>
-                    </div>
                         <form action = "<?php echo site_url('c_transaksi/editaksi_penerimaan'); ?>" method="post"  enctype="multipart/form-data" > 
                              <div class="card-body">
                                 <div class="col-md-12">
@@ -555,8 +621,6 @@ float:right;
                                 </div>      
                             </div>
                         </form>
-                    </div>    
-            </div>
 		</div>
 	</div>
 </section>

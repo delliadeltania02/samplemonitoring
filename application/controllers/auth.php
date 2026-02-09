@@ -54,7 +54,46 @@ class Auth extends Ci_Controller
 	{
 		$username = $this->input->post('username');
 		$password = $this->input->post('password');
-		$hasil = $this->m_login->login_other($username,$password);
+
+		// cek login di model
+		$user = $this->m_login->login_other($username, $password);
+
+		if ($user) {
+			// Set session
+			$this->session->set_userdata([
+				'logincek' => 'ok',
+				'bg_username' => $user['username'],
+				'bg_nama' => $user['nama'],
+				'bg_password' => $user['password'],
+				'bg_idlvl' => $user['id_level'],
+				'user_logged_in' => true,
+				'exclude_adidas' => true // <- tanda filter global untuk login_other
+			]);
+
+			// Redirect berdasarkan level user
+			switch ($user['id_level']) {
+				case '1': // Superadmin
+				case '2': // Penerimaan
+				case '3': // Kualitas
+				case '4': // Produksi
+					redirect('c_transaksiOther/index');
+					break;
+
+				case '7': // Barcode
+					redirect('c_transaksiOther/index_barcode');
+					break;
+
+				case '8': // Barcode other
+					redirect('c_transaksiOther/index_barcode_other');
+					break;
+
+				default:
+					redirect('c_transaksiOther/index');
+			}
+		} else {
+			$this->session->set_flashdata('error', 'Username atau password salah!');
+			redirect('Welcome/login_other');
+		}
 	}
 
 	public function logout()

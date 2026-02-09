@@ -4,7 +4,7 @@
     <?php require_once(__DIR__ . '/../../layout/_meta.php'); ?>
 
 
-    <title>Handling Sample</title>
+    <title>Sample Monitoring</title>
     <?php require_once(__DIR__ . '/../../layout/_css.php'); ?>
     
     </head>

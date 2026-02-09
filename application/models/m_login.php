@@ -35,4 +35,13 @@ class M_login extends CI_Model
 		$query = $this->db->get_where('tbl_login', ['id' => $user_id]);
 		return $query->row();
 	}
+
+	public function get_report_by_no($report_no)
+	{
+		return $this->db
+			->where('report_no', $report_no)
+			->where('buyer !=', 'adidas') // exclude adidas
+			->get('tbl_penerimaan')
+			->row_array();
+	}
 }

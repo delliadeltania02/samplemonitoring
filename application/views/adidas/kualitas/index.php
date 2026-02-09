@@ -1,63 +1,170 @@
 <style>
-.dataTables_filter{
-display:block;
-float:right;
+body {
+  background-color: #f8f9f7; /* broken white */
 }
- </style>
+.card {
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  border-radius: 10px;
+  border: none;
+  background-color: #ffffff; /* white card on broken white */
+}
+.card-header {
+  background: #2c3e50; /* charcoal/navy blend */
+  color: white;
+  font-weight: 500;
+  font-size: 14px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+  border-radius: 30px;
+  transition: all 0.3s ease-in-out;
+}
+.btn-sm i {
+  margin-right: 4px;
+}
+.btn-modern {
+  background: linear-gradient(to right, #2c3e50, #1c2833); /* charcoal to navy */
+  color: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  border: none;
+}
+.btn-modern:hover {
+  background: linear-gradient(to right, #1c2833, #0f1a21);
+  color: #fff;
+}
+.table-wrapper {
+  background: none;
+  padding: 0;
+  box-shadow: none;
+  overflow-x: auto;
+}
+.dataTables_wrapper .dataTables_filter {
+  text-align: right;
+  padding-right: 10px;
+  margin-top: 0;
+}
+.dataTables_wrapper .dataTables_length {
+  padding-left: 10px;
+  margin-top: 10px;
+}
+table.dataTable thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f1f3f2; /* soft broken white */
+  z-index: 2;
+  font-size: 13px;
+  white-space: nowrap;
+}
+table.dataTable td {
+  font-size: 12px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+table.dataTable td img {
+  max-height: 40px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  margin: auto;
+  border-radius: 6px;
+}
+.table td, .table th {
+  padding: 6px 10px;
+}
+/* Modal clean base */
+.modal-clean {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+/* Header */
+.modal-header-clean {
+  border-bottom: 1px solid #eee;
+  padding: 14px 18px;
+}
+
+.modal-header-clean .modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* Body */
+.modal-body-clean {
+  padding: 50px 20px;
+  font-size: 13px;
+  color: #333;
+}
+
+/* Footer */
+.modal-footer-clean {
+  border-top: 1px solid #eee;
+  padding: 12px 18px;
+}
+
+/* Close button */
+.modal-header-clean .close {
+  font-size: 20px;
+  opacity: 0.5;
+}
+
+.modal-header-clean .close:hover {
+  opacity: 1;
+}
+
+/* List test required */
+.list-test {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+</style>
 <div class="content-header">
-      <div class="container-fluid">
-        <div class="row mb-2">
-          <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-left">
-                <li class="breadcrumb-item"><a href="#">Handling Sample</a></li>
-                <li class="breadcrumb-item active">Quality Sample</li>
-                </ol>
-          </div>
-        </div>
+  <div class="container-fluid">
+    <div class="row mb-1">
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-left">
+          <li class="breadcrumb-item"><a href="#">Sample Monitoring</a></li>
+          <li class="breadcrumb-item active">Quality Sample</li>
+        </ol>
       </div>
+    </div>
+  </div>
 </div>
-<section class="content" id="content "data-url="<?= base_url('c_transaksi') ?>">
-    <div class="container-fluid">
-        <div class="row">
-          <div class="col-md-10" style="padding-bottom: 1%;">
-            
-            </div>
-            <div class="col-md-2" style="padding-bottom: 1%;">
-           
-            </div>
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header" style="background-color: #36454F;" >
-                        <h3 class="card-title"></h3>
-                    </div>
-                    <div class="card-body">    
-                        <div class="card">
-                            <div class="card-body">
-                              <div class="table-responsive">
-                                <table id="example2" class="table table-bordered table-striped table-sm text-nowrap">
-                                    <thead>
-                                      <tr>
-                                      <th class="all">No</th>
-                                          <th>Report No</th>
-                                          <th>Item No</th>
-                                          <th>Stage</th>
-                                          <th>Date Received</th>
-                                          <th>Batch/LOT Number</th>
-                                          <th>Order Number/PO-LCO</th>
-                                          <th>Article No</th>
-                                          <th>Code Of Fabric</th>
-                                          <th>Style No</th>
-                                          <th>Color</th>
-                                          <th>Color Of ...</th>
-                                          <th>Test Required</th>
-                                          <th>Action</th>
-                                      </tr>
-                                    </thead>
+<section class="content" id="content" data-url="<?= base_url('c_transaksi') ?>">
+  <div class="container-fluid">
+    <div class="row align-items-center mb-2">
+      <div class="col">
+        <h5 class="mb-0" style="font-weight: 600; color: #2c3e50;">📦 List of Quality Sample</h5>
+      </div>
+    </div>
+    <div class="card p-3">
+      <div class="table-responsive">
+        <table id="example1" class="table table-bordered table-striped table-sm text-nowrap">
+        <thead>
+          <tr>
+              <th class="all">No</th>
+              <th>Report No</th>
+              <th>Item No</th>
+              <th>Stage</th>
+              <th>Date Received</th>
+              <th>Batch/LOT Number</th>
+              <th>Order Number/PO-LCO</th>
+              <th>Article No</th>
+              <th>Code Of Fabric</th>
+              <th>Style No</th>
+              <th>Action</th>
+          </tr>
+        </thead>
                                     <tbody id="myTable">
                                       <?php
                                        $no = 1;
                                        foreach($kualitas as $u) : ?>
-                                       
                                         <tr>
                                             <td><?= $no++ ?></td>
                                             <td><?= $u->report_no?></td>
@@ -69,108 +176,104 @@ float:right;
                                             <td><?= $u->article_no?></td>
                                             <td><?= $u->code_of_fabric?></td>
                                             <td><?= $u->style_no?></td>
-                                            <td><?= $u->color?></td>
-                                            <td><?= $u->color_of?></td>
-                                            <td>
-                                            <?php
-                                                $base_url = site_url('c_transaksi/index_testResult/');
+                                            <td class="text-nowrap">
+                                              <?php if ($u->jumlah_kembali > 0): ?>
+                                                  <!-- REVISI -->
+                                                  <a href="<?= site_url("c_transaksi/edit_kualitas/{$u->id_penerimaan}/{$u->id_reportkualitas}") ?>"
+                                                    class="btn btn-warning btn-sm">
+                                                      <i class="fa fa-undo"></i> Revisi
+                                                  </a>
 
-                                                // Map of test names to URL parameters
-                                                $test_map = [
-                                                    "Color Fastness to House Hold Laundering" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness to Water" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness to Perspiration" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness to Washing" =>  "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness to Rubbing" =>  "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness to Light Fastness" =>  "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness to Light Fastness Perspiration" =>  "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness to Phenolic Yellowing" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness to Saliva" =>  "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness Dye Transfer In Storage" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    // Add other tests here
-                                                    "Color Migration Fastness" =>  "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Migration Oven Test" =>  "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness to Chlorine Water" =>  "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness to Sea Water" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness to Chlorine Bleach" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Color Fastness to Non-Chlorine Bleach" =>  "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Dimensional Stability to Laundering" =>  "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",  
-                                                    "Appereance Change After Laundering" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",  
-                                                    "Spirality" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Durability Test" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Wearing Test" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Cuttable Width" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Fabric Weight" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Product Weight" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Piece Weight" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Bow and Skew" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Heat Shrinkage" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Flammability" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Elongation & Recovery" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Fibre/Fuzz" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "ICI Pilling Box" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Martindale Pilling" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Random Tumble Pilling" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Snagging (Snag pod)" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Abrasion Resistance" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Abrasion Sock" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Bursting Pneumatic" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Ball Burst" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Textile Material Thickness Measurement" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Odour" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Moisture Content" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Accelerated Ageing by Hydrolysis" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Residu & Ageing by Test for Sticker" =>"{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Pull of Force" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Seam Slippage/Strength" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Seam Slippage of Woven" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Tear Strength" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Yarn Strength" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Tensile Strength" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Tear Force" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Thread Count" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Water Absorbency (Drop Test)" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Wicking Height" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Evaporation Rate" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Water Repellency (Spray Test)" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Waterproof (Hydrostatic)" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Air Permeability" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Fibre Content" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Oil Content" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "pH Value" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Formaldehyde" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Nickel Test" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Azo Dyes" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "AP" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "APEO" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Phtalates" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Snagging (Snag Pod)" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}",
-                                                    "Bursting Pnematic" => "{$u->report_no}/{$u->id_kualitas}/{$u->id_penerimaan}"
-                                                ];
-
-                                                // Check if the test_required exists in the map
-                                                if (isset($test_map[$u->test_required])) {
-                                                    $link = $base_url . $test_map[$u->test_required];
-                                                    echo "<a href=\"{$link}\">{$u->test_required}</a>";
-                                                } 
-                                            ?>
-                                          
-                                            </td>
-                                            <td>
-                                              <a href="<?= site_url('c_transaksi/detail_kualitas/' . $u->id_penerimaan . '/' . $u->id_kualitas) ?>" class="btn btn-outline-success btn-sm"><i class="fa fa-eye"></i></a>
-                                              <a href="<?=site_url('c_transaksi/hapus_kualitas/').$u->id_kualitas?>" onclick="return confirm('Apakah Anda Yakin Ingin Menghapus <?php echo $u->test_required ?>');" class="btn btn-outline-danger btn-sm remove"><i class="fa fa-trash"></i></a>
-                                            </td>
+                                              <?php elseif ($u->jumlah_belum > 0): ?>
+                                                  <!-- MULAI TEST (BUKA MODAL) -->
+                                                  <button type="button"
+                                                    class="btn btn-primary btn-sm btnMulaiTest"
+                                                    data-toggle="modal"
+                                                    data-target="#modalPilihTest"
+                                                    data-id_penerimaan="<?= $u->id_penerimaan ?>"
+                                                    data-id_kualitas="<?= $u->id_kualitas ?>"
+                                                    data-report_no="<?= $u->report_no ?>">
+                                                    <i class="fa fa-play"></i> Mulai Test
+                                                  </button>
+                                              <?php else: ?>
+                                                  <!-- SUDAH SELESAI -->
+                                                  <button class="btn btn-success btn-sm" disabled>
+                                                      <i class="fa fa-check"></i> Selesai
+                                                  </button>
+                                              <?php endif; ?>
+                                              <!-- DETAIL (SELALU ADA) -->
+                                              <a href="<?= site_url('c_transaksi/detail_kualitas/' . $u->id_penerimaan) ?>"
+                                                class="btn btn-outline-success btn-sm">
+                                                  <i class="fa fa-eye"></i>
+                                              </a>
+                                          </td>
                                         </tr>
-                                       
                                       <?php endforeach; ?>
                                     </tbody>
-                                  </table>
-                              </div>
-                            </div>
-                        </div>        	
+        </table>
+      </div>
+      <div class="modal" id="modalPilihTest" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md" role="document">
+          <form action="<?= site_url('c_transaksi/proses_kualitas') ?>" method="post">
+            <div class="modal-content modal-clean">
+              <div class="modal-header modal-header-clean">
+                <h5 class="modal-title">Pilih Test Required</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div class="modal-body modal-body-clean">
+                  <input type=input" id="id_penerimaan" name="id_penerimaan">
+                  <input type="input" id="id_kualitas" name="id_kualitas">
+                  <input type="input" id="report_no" name="report_no">
+                  <!-- DROPDOWN -->
+                  <div class="dropdown w-100">
+                    <button
+                      class="btn btn-outline-secondary w-100 text-left dropdown-toggle"
+                      type="button"
+                      data-toggle="dropdown">
+                      Pilih Test Required
+                    </button>
+                    <div class="dropdown-menu w-100 p-2"
+                        style="max-height:260px; overflow-y:auto;">
+                      <!-- SEARCH -->
+                      <input type="text"
+                            class="form-control form-control-sm mb-2"
+                            id="searchTest"
+                            placeholder="Cari test...">
+
+                        <!-- ACTION BUTTON -->
+                        <div class="d-flex justify-content-between mb-2">
+                          <button type="button"
+                                  class="btn btn-sm btn-outline-primary"
+                                  id="btnSelectAll">
+                            Select All
+                          </button>
+
+                          <button type="button"
+                                  class="btn btn-sm btn-outline-danger"
+                                  id="btnClearAll">
+                            Clear
+                          </button>
+                        </div>
+
+
+                      <!-- LIST CHECKBOX -->
+                      <div id="list-test-required"></div>
+
                     </div>
-                    </div>
+                  </div>
+              </div>
+              <div class="modal-footer modal-footer-clean">
+                <button type="submit" class="btn btn-primary btn-sm px-4">
+                  Mulai Pengujian
+                </button>
+              </div>
             </div>
+          </form>
+        </div>
+      </div>
+    </div>
 		</div>
 	</div>
 </section>

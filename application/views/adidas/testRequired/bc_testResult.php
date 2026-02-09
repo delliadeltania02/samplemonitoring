@@ -4,9 +4,120 @@
     <?php require_once(__DIR__ . '/../../layout/_meta.php'); ?>
 
 
-    <title>Handling Sample</title>
+    <title>Sample Monitoring</title>
     <?php require_once(__DIR__ . '/../../layout/_css.php'); ?>
-    
+    <style><style>
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 14px;
+        background-color: #f8f9fa;
+    }
+
+    .card {
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border-radius: 10px;
+        border: none;
+    }
+
+    .card-header {
+        background-color: #36454F !important;
+        color: white;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+    }
+
+    h4 {
+        font-weight: 600;
+        color: #36454F;
+        margin-top: 10px;
+    }
+
+    h4 hr {
+        border-top: 2px solid #ccc;
+        margin-top: 5px;
+    }
+
+    label {
+        font-weight: 500;
+        color: #444;
+        margin-bottom: 5px;
+    }
+
+    input.form-control,
+    select.form-control {
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        transition: border-color 0.3s, box-shadow 0.3s;
+        box-shadow: none;
+    }
+
+    input.form-control:focus,
+    select.form-control:focus {
+        border-color: #36454F;
+        box-shadow: 0 0 0 0.1rem rgba(54, 69, 79, 0.25);
+    }
+
+    .btn {
+        border-radius: 6px;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn:hover {
+        opacity: 0.9;
+    }
+
+    .breadcrumb {
+        background-color: transparent;
+        font-size: 13px;
+        padding: 0;
+        margin-bottom: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-control[readonly] {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+
+    .containerColor .form-control,
+    .containerOf .form-control {
+        margin-bottom: 10px;
+    }
+
+    .btn-tambah, .btn-hapus-of {
+        background-color: #6c757d !important;
+        color: white;
+    }
+
+    .btn-tambah:hover, .btn-hapus-of:hover {
+        background-color: #5a6268 !important;
+    }
+
+    .input-group label {
+        font-weight: 500;
+        margin-right: 10px;
+        margin-top: 5px;
+    }
+
+    .custom-file input[type="file"] {
+        padding: 5px;
+        font-size: 13px;
+    }
+
+    .pl-pr-1 {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .card-footer {
+        background-color: #f1f1f1;
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+    }
+</style>
     </head>
     <body style="background-color:#fffffe ;">
         <?php require_once(__DIR__ . '/../../layout-fe/_header.php'); ?>
@@ -14,7 +125,33 @@
             <div class="container-fluid">
                 <form action = "<?php echo site_url('c_transaksi/tambahaksi_methodbc'); ?>" method="post" name="method"> 
                     <div class="card card-navy">
-                        <div class="card-header"></div>
+5 ZWD
+225.33 IDR
+10 ZWD
+450.66 IDR
+25 ZWD
+1,126.65 IDR
+50 ZWD
+2,253.3 IDR
+100 ZWD
+4,506.6 IDR
+500 ZWD
+22,533 IDR
+1,000 ZWD
+45,066 IDR
+5,000 ZWD
+225,330 IDR
+10,000 ZWD
+450,660 IDR
+Convert Indonesian Rupiah to Zimbabwean Dollar
+idr
+IDR
+zwd
+ZWD
+1 IDR
+0.0221897 ZWD
+5 IDR
+0.110948 Z                        <div class="card-header"></div>
                         <div class="col-md-12">
                             <div class="card card-navy">
                             

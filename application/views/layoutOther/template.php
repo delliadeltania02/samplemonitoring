@@ -3,7 +3,7 @@
   <head>
     <!-- TEMPAT META -->
     <?php require_once('_meta.php'); ?>
-    <title>Handling Sample</title>
+    <title>Sample Monitoring</title>
   <!-- TEMPAT CSS -->
   <?php require_once('_css.php');?>
   </head>

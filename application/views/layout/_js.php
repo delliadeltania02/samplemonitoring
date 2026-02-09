@@ -1,9 +1,10 @@
 <!-- jQuery -->
 <script src="<?php echo base_url('assets');?>/plugins/jquery/jquery.min.js"></script>
-<!-- jQuery UI 1.11.4 -->
-<script src="<?php echo base_url('assets');?>/plugins/jquery-ui/jquery-ui.min.js"></script>
 <!-- Bootstrap 4 -->
 <script src="<?php echo base_url('assets');?>/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+<!-- jQuery UI 1.11.4 -->
+<script src="<?php echo base_url('assets');?>/plugins/jquery-ui/jquery-ui.min.js"></script>
+
 <!-- ChartJS -->
 <script src="<?php echo base_url('assets');?>/plugins/chart.js/Chart.min.js"></script>
 <!-- Sparkline -->
@@ -59,9 +60,207 @@
 <script src="<?php echo base_url('assets');?>/plugins/dropzone/min/dropzone.min.js"></script>
 
 <script src="<?php echo base_url('assets');?>/html5-qrcode-master/minified/html5-qrcode.min.js"></script>
-<script src="<?php echo base_url('assets');?>/plugins/chart.js/Chart.min.js"></script>
+<script>
+  $('#modalPilihTest').on('show.bs.modal', function (event) {
+    const button = $(event.relatedTarget);
 
-<script src="<?php echo base_url('assets');?>/dist/js/adminlte.min.js"></script>
+    const id_penerimaan = button.data('id_penerimaan');
+    const id_kualitas   = button.data('id_kualitas');
+    const report_no     = button.data('report_no');
+
+    console.log('OPEN MODAL:', {
+      id_penerimaan,
+      id_kualitas,
+      report_no
+    });
+
+    $('#id_penerimaan').val(id_penerimaan);
+    $('#id_kualitas').val(id_kualitas);
+    $('#report_no').val(report_no);
+
+    $('#searchTest').val('');
+    $('.dropdown-toggle').text('Pilih Test Required');
+
+    loadTestRequired(id_penerimaan);
+  });
+
+
+function loadTestRequired(id_penerimaan) {
+  $('#list-test-required').empty().html('<small>Loading...</small>');
+
+  $.ajax({
+    url: "<?= site_url('c_transaksi/get_test_required_dropdown') ?>",
+    type: "POST",
+    dataType: "json",
+    data: { id_penerimaan },
+    success: function (res) {
+      console.log('RES:', res);
+      let html = '';
+
+      if (!res || res.length === 0) {
+        html = '<small class="text-muted">Tidak ada test tersedia</small>';
+      } else {
+        res.forEach((item, i) => {
+          html += `
+            <div class="custom-control custom-checkbox test-item mb-1">
+              <input
+                type="checkbox"
+                class="custom-control-input"
+                name="test_required[]"
+                value="${item.test_required}"
+                id="test_${i}">
+              <label class="custom-control-label" for="test_${i}">
+                ${item.test_required}
+              </label>
+            </div>
+          `;
+        });
+      }
+
+      $('#list-test-required').html(html);
+    },
+    error: function (xhr) {
+      console.error(xhr.responseText);
+      $('#list-test-required').html(
+        '<small class="text-danger">Gagal memuat data</small>'
+      );
+    }
+  });
+}
+
+$(document).on('keyup', '#searchTest', function () {
+  const keyword = $(this).val().toLowerCase();
+
+  $('#list-test-required .test-item').each(function () {
+    const text = $(this).text().toLowerCase();
+    $(this).toggle(text.includes(keyword));
+  });
+});
+
+
+$(document).on('change', 'input[name="test_required[]"]', function () {
+  const total = $('input[name="test_required[]"]:checked').length;
+
+  $('.dropdown-toggle').text(
+    total ? total + ' test dipilih' : 'Pilih Test Required'
+  );
+});
+
+$(document).on('click', '#btnSelectAll', function (e) {
+  e.preventDefault();
+
+  $('#list-test-required input[type="checkbox"]:visible')
+    .prop('checked', true)
+    .trigger('change');
+});
+
+$(document).on('click', '#btnClearAll', function (e) {
+  e.preventDefault();
+
+  $('#list-test-required input[type="checkbox"]')
+    .prop('checked', false)
+    .trigger('change');
+
+  $('.dropdown-toggle').text('Pilih Test Required');
+});
+
+$(document).on('click', '.dropdown-menu', function (e) {
+  e.stopPropagation();
+});
+
+function openDeleteModal(id) {
+    const input = document.getElementById('id_handlingsample');
+    if (!input) {
+      console.error('Hidden input id_handlingsample tidak ditemukan');
+      return;
+    }
+
+    input.value = id;
+
+    $('#modalDeleteReport')
+      .appendTo('body')
+      .modal('show');
+  }
+
+function deleteReport() {
+  const id = document.getElementById('id_handlingsample').value;
+
+  if (!id) {
+    alert('ID tidak ditemukan');
+    return;
+  }
+
+  $.ajax({
+    url: "<?= site_url('c_transaksi/deleteReportHandling'); ?>",
+    type: "POST",
+    dataType: "json",
+    data: {
+      id_handlingsample: id
+    },
+    success: function (res) {
+      if (res.status) {
+        $('#modalDeleteReport').modal('hide');
+
+        // reload halaman / datatable
+        location.reload();
+      } else {
+        alert(res.message);
+      }
+    },
+    error: function (xhr) {
+      console.error(xhr.responseText);
+      alert('Terjadi kesalahan saat menghapus data');
+    }
+  });
+}
+
+  $(document).on('hidden.bs.modal', function () {
+    $('.modal-backdrop').remove();
+    $('body').removeClass('modal-open');
+    $('body').css('padding-right', '0');
+  });
+</script>
+
+
+<script>
+  function updateClock() {
+    const clockEl = document.getElementById('clock');
+    if (!clockEl) return; // ⬅️ PENTING
+
+    const now = new Date();
+
+    const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+    const dayName = days[now.getDay()];
+    const date = now.getDate();
+    const monthName = months[now.getMonth()];
+    const year = now.getFullYear();
+
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+
+    clockEl.textContent =
+      `${dayName}, ${date} ${monthName} ${year} - ${hours}:${minutes}:${seconds}`;
+  }
+
+  setInterval(updateClock, 1000);
+  updateClock();
+</script>
+
+
+
+<script>
+  document.querySelectorAll('.has-submenu > a').forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      const parent = this.parentElement;
+      parent.classList.toggle('open');
+    });
+  });
+</script>
+
 
 <script>
 $(function () {
@@ -73,7 +272,7 @@ const barChart = new Chart(ctxBar, {
         labels: <?= json_encode($penerimaan_bulan_labels) ?>,
         datasets: [{
             label: 'Jumlah Sample Diterima',
-            data: <?= json_encode($penerimaan_bulan_values) ?>,
+            data: <?= json_encode(array_map('intval', $penerimaan_bulan_values)) ?>,
             backgroundColor: [
                 'rgba(40, 167, 69, 0.8)', // hijau
                 'rgba(255, 193, 7, 0.8)', // kuning
@@ -82,7 +281,7 @@ const barChart = new Chart(ctxBar, {
             ],
             borderRadius: 10,
             barPercentage: 0.5,
-            categoryPercentage: 0.5
+            categoryPercentage:0.5 
         }]
     },
     options: {
@@ -107,26 +306,29 @@ const barChart = new Chart(ctxBar, {
                 }
             }
         },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    stepSize: 1,
-                    precision: 0,
-                    color: '#6c757d'
-                },
-                grid: {
-                    color: '#e9ecef'
-                }
+   scales: {
+          yAxes: [{
+            ticks: {
+              beginAtZero: false,
+              min: <?= min($penerimaan_bulan_values) ?> - 1,
+              max: <?= max($penerimaan_bulan_values) ?> + 1,
+              stepSize: 1,
+              callback: function(value) {
+                return parseInt(value); // ✅ menghilangkan .0
+              }
             },
-            x: {
-                ticks: {
-                    color: '#6c757d'
-                },
-                grid: {
-                    display: false
-                }
+            gridLines: {
+              color: '#e9ecef'
             }
+          }],
+          xAxes: [{
+            ticks: {
+              fontColor: '#6c757d'
+            },
+            gridLines: {
+              display: false
+            }
+          }]
         }
     }
 });
@@ -211,8 +413,6 @@ const barChart = new Chart(ctxBar, {
   });
 </script>
 
-
-
 <script>
     $("#id_testmethod").select2();
     function editMethod(){
@@ -245,15 +445,20 @@ const barChart = new Chart(ctxBar, {
     });
   });
 
-  $(function () {
-    $("#example1").DataTable({ "responsive": true, "autoWidth": false });
-  });
 
-  $(function () {
-    $("#example2").DataTable({
+  //$(function () {
+  //  $("#example2").DataTable({
+  //    "responsive": true,
+  //    "autoWidth": true,
+  //    "ordering": false
+  //  });
+  //});
+
+    $(function () {
+    $("#otherTable").DataTable({
       "responsive": true,
       "autoWidth": true,
-      "ordering": false
+      "ordering": false 
     });
   });
 
@@ -272,6 +477,15 @@ const barChart = new Chart(ctxBar, {
       "ordering": false
     });
   });
+
+  $(document).ready(function() {
+  $('#example1').DataTable({
+    scrollX: true,
+    responsive: false, // disable agar scrollX bekerja penuh
+    autoWidth: false
+  });
+});
+
 </script>
 <script>
     function docReady(fn) {
@@ -573,156 +787,160 @@ const barChart = new Chart(ctxBar, {
     </script>
       <script>
         $(document).ready(function(){
-			$('tfoot').hide()
-
-			$(document).keypress(function(event){
-		    	if (event.which == '13') {
-		      		event.preventDefault();
-			   	}
-			})
-
-			$('#id_testmatrix').on('change', function(){
-				if($(this).val() == '') reset()
-				else {
-					$.ajax({
-						url: "<?= site_url('c_transaksi/get_all_method') ?>",
-						type: 'POST',
-						dataType: 'json',
-						data: {id_testmatrix: $(this).val()},
-						success: function(data){
-                            $('input[name="method_code"]').val(data.method_code)
-                            $('input[name="title_row"]').val(data.method_name)
-							              $('input[name="measurement_row"]').val(data.measurement)
-                            //$('input[name="title_row"]').val(data.title)
-                            $('input[name="value_from_row"]').val(data.value_from)
-                            $('input[name="value_to_row"]').val(data.value_to)  
-                            $('select#result_type').prop('disabled', false)
-							              $('button#tambah').prop('disabled', false)
-                            $('input[name="status"]').html('<strong>' + sum_method() + '</strong>');
-						}
-					})
-				}
-			})
+			    $('tfoot').hide()
+            $(document).keypress(function(event){
+                if (event.which == '13') {
+                    event.preventDefault();
+                }
+            })
         })
 
-        
-        $('#result_type').on('change', function(){
-        if($(this).val() == 'number')$('#div_statement').hide(),
-                                     $('#div_statement_status').hide(), 
-                                     $('#div_value_from').show(),
-                                      $('#div_value_to').show(),
-                                      $('#div_result').show(),
-                                      $('input[name="result_row"]').prop('readonly', false).val(0),
-                                      $('#div_status').show()
-                                      $('#div_passfail').hide().val(''),
-                                      $('#div_passfail_1').hide().val(''),
-                                      $('#div_status_passfail').hide().val(''),
-                                      $('#div_comment').hide().val(''),
-                                      $('input[name="comment"]').val(''),
-                                      $('select[name="result_passfail_row"]').prop('readonly', true).val(''),
-                                      $('select[name="result_passfail_row_1"]').prop('readonly', true).val(''),
-                                      $('input[name="status_passfail"]').prop('readonly', true).val(''),
-                                      $('textarea[name="statement"]').prop('readonly', true).val(''),
-                                      $('select[name="status_statement"]').prop('readonly', true).val('') 
+    
+        $('#result_type').on('change', function () {
+            let val = $(this).val();
 
+            // ==== RESET SEMUA ====
+            $('#div_statement, #div_statement_status, #div_passfail, #div_passfail_1, #div_status_passfail, #div_comment, #div_value_from, #div_value_to, #div_result, #div_status').hide();
+
+            $('.shrinkage, .formaldehyde, .sock').hide().find('input, select, textarea').val('');
+
+            $('input[name="result_row"]').val('').prop('readonly', true);
+            $('input[name="status"]').val('').prop('readonly', true);
+            $('textarea[name="statement"]').val('').prop('readonly', true);
+            $('.status_row').val('');
+
+            // ==== NUMBER ====
+            if (val === 'number') {
+                $('#div_value_from').show();
+                $('#div_value_to').show();
+                $('#div_result').show();
+                $('#div_status').show();
+                $('input[name="result_row"]').prop('readonly', false).val(0);
+            }
+
+            // ==== BOOLEAN ====
+            if (val === 'boolean') {
+                $('#div_passfail').show();
+                $('#div_passfail_1').show();
+                $('#div_status_passfail').show();
+                $('#div_comment').show();
+            }
+
+            // ==== SOCK ====
+            if (val === 'sock') {
+                $('.sock').show();
+                $('#div_comment').hide();
+                $('#div_value_from').hide();
+                $('#div_value_to').hide();
+            }
+
+            // ==== STATEMENT ====
+            if (val === 'statement') {
+                $('#div_statement').show();
+                $('#div_statement_status').show();
+                $('#div_status_passfail').show();
+                $('textarea[name="statement"]').prop('readonly', false);
+            }
+
+            // ==== SHRINKAGE ====
+            if (val === 'shrinkage') {
+                $('.shrinkage').show();
+                $('#div_comment').show();
+            }
+
+            // ==== FORMALDEHYDE ====
+            if (val === 'formaldehyde') {
+                $('.formaldehyde').show();
+                $('#div_value_from').show();
+                $('#div_value_to').show();
+            }
         });
 
-        $('#result_type').on('change', function(){
-        if($(this).val() == 'boolean')$('#div_statement').hide(),
-                                      $('#div_statement_status').hide(),
-                                      $('#div_passfail').show(),
-                                      $('#div_passfail_1').show(),
-                                      $('#div_status_passfail').show(),
-                                      $('#div_comment').show(),
-                                      $('#div_value_from').hide(),
-                                      $('#div_value_to').hide(),
-                                      $('#div_result').hide(),
-                                      $('#div_status').hide(),
-                                      $('select[name="result_passfail_row"]').prop('readonly', false),
-                                      $('select[name="result_passfail_row_1"]').prop('readonly', false),
-                                      $('input[name="result_row"]').prop('readonly', true).val(''),
-                                      $('input[name="status"]').prop('readonly', true).val(''),
-                                      $('textarea[name="statement"]').prop('readonly', true).val('') 
-                                      $('select[name="status_statement"]').prop('readonly', true).val('')             
+
+        $('#method_group').on('change', function () {
+            if ($(this).val() == 'Product') {
+                $('.other').show();
+            } else {
+                // hide
+                $('.other').hide();
+              
+
+                // kosongkan semua input, select, textarea di dalam .other
+                $('.other').find('input, select, textarea').val('');
+               
+                
+                // kalau ada checkbox atau radio
+                $('.other').find('input:checkbox, input:radio').prop('checked', false);
+            }
         });
 
-        $('#result_type').on('change', function(){
-        if($(this).val() == 'statement')$('#div_statement').show(),
-                                        $('#div_statement_status').show(),
-                                        $('#div_passfail').hide(),
-                                        $('#div_passfail_1').hide(),
-                                         $('#div_status_passfail').show(),
-                                        $('#div_comment').hide(),
-                                        $('#div_value_from').hide(),
-                                        $('#div_value_to').hide(),
-                                        $('#div_result').hide(),
-                                        $('#div_status').hide(),
-                                        $('textarea[name="statement"]').prop('readonly', false),
-                                        $('select[name="result_passfail_row"]').prop('readonly', false),
-                                        $('select[name="result_passfail_row_1"]').prop('readonly', false),
-                                        $('input[name="result_row"]').prop('readonly', true).val(''),
-                                        $('input[name="status"]').prop('readonly', true).val('')                   
-        });
-
-        $('#id_testmatrix').on('change', function(){
-            $('select[name="result_passfail_row"]').prop('readonly', true),
-            $('input[name="result_row"]').prop('readonly', true).val(''),
-            $('input[name="status"]').prop('readonly', true).val(''),
-            $('select[name="result_passfail_row"]').prop('readonly',true).val(''),
-            $('input[name="status_passfail"]').prop('readonly', true).val(''),
-            $('#div_passfail').hide(),
-            $('#div_status_passfail').hide(),
-            $('#div_value_from').hide(),
-            $('#div_value_to').hide(),
-            $('#div_result').hide(),
-            $('#div_status').hide(),
-            $('#result_type').prop('disable', false)
-        });
 
         $(document).on('click', '#tambah', function(e){   
-				//const url_keranjang_barang = $('#content').data('url') + '/keranjang_barang'
-				const data_method = {
-                    id_order : $('input[name="id_order"]').val(),
-                    report_no : $('input[name="report_no"]').val(),
-                    id_testmatrix: $('select[name="id_testmatrix"]').val(),
-                    method_code: $('input[name="method_code"]').val(),
-                    measurement: $('input[name="measurement_row"]').val(),
-                    title: $('input[name="title_row"]').val(),
-                    result: $('input[name="result_row"]').val(),
-                    before_wash: $('input[name="before_wash_row"]').val(),
-                    wash1: $('input[name="wash1_row"]').val(),
-                    status: $('input[name="status"]').val(),
-                    result_passfail: $('select[name="result_passfail_row"]').val(),
-                    result_passfail1: $('select[name="result_passfail_row_1"]').val(),
-                    status_passfail: $('input[name="status_passfail"]').val(),
-                    statement: $('textarea[name="statement"]').val(),
-                    comment: $('input[name="comment"]').val()
-				}
-                    
-                        $.ajax({
-                            url: "<?=site_url('c_transaksi/keranjang_method') ?>",
-                            type: 'POST',
-                            data: data_method,
-                            success: function(data){
-                                //if($('select[name="id_testmatrix"]').val() == data_method.id_testmatrix) $('option[value="' + data_method.id_testmatrix + '"]').hide()
-                                reset()
+            e.preventDefault(); // Supaya tombol tidak submit form default
 
-                                $('table#keranjang_method tbody').append(data)
-                                $('tfoot').show()
+            // Ambil semua field, pakai nama sesuai HTML
+            const data_method = {
+                id_testmethod: $('input[name="id_testmethod"]').val()||'-',
+                id_order: $('input[name="id_order"]').val()|| '-',
+                report_no: $('input[name="report_no"]').val()|| '-',
+                id_testmatrix: $('select[name="id_testmatrix"]').val()|| '-',
+                method_code: $('input[name="method_code"]').val()|| '-',
+                //method_name: $('input[name="method_name"]').val()|| '-',
+                method_name: $('input[name="title_row"]').val() || '-',
+                measurement: $('input[name="measurement_row"]').val()|| '-',
+                title: $('input[name="title_row"]').val()|| '-',
+                result: $('input[name="result_row"]').val()|| '-',
+                be_wash: $('input[name="be_wash"]').val()|| '-',
+                af_wash_1: $('input[name="af_wash_1"]').val()|| '-',
+                ac_wash_1: $('input[name="ac_wash_1"]').val()|| '-',
+                af_wash_5: $('input[name="af_wash_5"]').val()|| '-',
+                ac_wash_5: $('input[name="ac_wash_5"]').val()|| '-',
+                af_wash_15: $('input[name="af_wash_15"]').val()|| '-',
+                ac_wash_15: $('input[name="ac_wash_15"]').val()|| '-',
+                result_passfail: $('select[name="result_passfail_row"]').val()|| '-',
+                result_passfail1: $('select[name="state_1"]').val()|| '-',
+                status_passfail: $('input[name="status_boolean"]').val()|| '-',
+                statement: $('textarea[name="statement"]').val()|| '-',
+                comment: $('input[name="comment"]').val()|| '-',
+                status_numeric: $('input#status_numeric').val() || '-',
+                status_shrinkage: $('input#status_shrinkage').val() || '-',
+                status_boolean: $('input#status_boolean').val() || '-',
+                status_statement_result: $('input#status_statement_result').val() || '-',
+                mass_of : $('input[name="mass_of"]').val() || '-',
+                range_graph_1 : $('input[name="range_graph_1"]').val() || '-',
+                range_graph_2 : $('input[name="range_graph_2"]').val() || '-',
+                status_formaldehyde : $('input[name="status_formaldehyde"]').val() || '-',
+                result_formaldehyde : $('input[name="result_formaldehyde"]').val() || '-',
+                nahm_sock : $('input[name="nahm_sock"]').val() || '-',
+                result_sock : $('input[name="result_sock"]').val() || '-',
+                comment_sock : $('input[name="comment_sock"]').val() || '-',
+                status_sock : $('input[name="status_sock"]').val() || '-'
+            };
+
+            // AJAX kirim ke PHP keranjang
+            $.ajax({
+                url: "<?=site_url('c_transaksi/keranjang_method')?>",
+                type: 'POST',
+                data: data_method,
+                success: function(data){
+                    // Reset semua input form supaya bisa tambah baris lagi
+                    reset(); // pastikan fungsi reset() mengosongkan semua input
+                    $('table#keranjang_method tbody').append(data);
+                    $('tfoot').show();
+
+                    // Hitung status global setelah tambah
+                    const status = hitung_status(); // fungsi hitung_status() tetap dipakai
+                    $('input[name="result_status"]').val(status);
+                    $('#result_status').text(status);
+                },
+                error: function(){
+                    alert('Terjadi kesalahan saat menambah data.');
+                }
+            });
+        });
 
 
-                                $('#result_status tfoot').html('<strong>' + hitung_status() + '</strong>')
-                                $('input[name="result_status"]').val(hitung_status())
-                                $('input[name="result_status"]').html('<strong>' + hitung_status() + '</strong>');
-                            
-                            },
-                            error:function(){
-                            alert('error');
-                            }
-                        })
-			})
-
-                    $(document).on('click', '#hapus_method', function() {
+        $(document).on('click', '#hapus_method', function() {
                           // Remove the row containing the clicked delete button
                           $(this).closest('.row-keranjang-method').remove();
 
@@ -735,7 +953,7 @@ const barChart = new Chart(ctxBar, {
                           $('option[value="' + $(this).data('method_name') + '"]').show();
                       });
                                             
-                        $('#simpanshrinkage').on('click', function(){
+        $('#simpanshrinkage').on('click', function(){
               
                         var currentRow =  $(this).closest("tr");
 
@@ -759,131 +977,64 @@ const barChart = new Chart(ctxBar, {
                         })
                     })
 
-            function status_boolean(){
-                var status1 = document.querySelector("#result_passfail").value;
-                var status2 = document.querySelector("#result_passfail1").value;
 
-                if (status1 !== "Rejected" && status2 !== "Rejected"){
-                    document.querySelector("#status_passfail").value = 'pass';
-                } else {
-                    document.querySelector("#status_passfail").value = 'fail';
-                }
-            }
+    function reset() {
+        // ===== Reset Select2 Test Matrix =====
+        $('select[name="id_testmatrix"]').val(null).trigger('change').prop('disabled', false);
 
-           
+        // ===== Reset Input Text =====
+        $('#title_row, #measurement_row, #value_from, #value_to, #result_row, #status, #be_wash, #af_wash_1, #af_wash_5, #af_wash_15, #ac_wash_1, #ac_wash_5, #ac_wash_15, #status_numeric, #status_shrinkage, #status_boolean, #status_statement_result, #method_code, #comment').val('');
+        
+        // ===== Reset Textarea =====
+        $('#statement').val('');
 
-         
+        // ===== Reset Selects =====
+        //$('#method_group').val($('#method_group option:first').val()).prop('disabled', false).trigger('change');
+        // $('#result_type, #result_passfail, #result_passfail1, #status_statement').val('Pilih').prop('disabled', false);
+        $('#result_type').val('Pilih').prop('disabled', true);
 
-        function reset()
-        {
-            $('select[name="id_testmatrix"]').val('Pilih Method'),
-            $('input[name="measurement_row"]').val(''),
-            $('input[name="value_from_row"]').val(''),
-            $('input[name="value_to_row"]').val(''),
-            $('input[name="result_row"]').prop('readonly', true).val(''),
-            $('input[name="title_row"]').prop('readonly', true).val(''),
-            $('select[name="result_type"]').prop('readonly', true).val(''),
-            $('select[name="result_passfail_row"]').prop('readonly', true).val(''),
-            $('input[name="status_passfail"]').prop('readonly', true).val(''),
-            $('#div_value_from').hide(),
-            $('#div_value_to').hide(),
-            $('#div_result').hide(),
-            $('#div_status').hide(),
-            $('#div_passfail').hide().val(''),
-            $('#div_passfail_1').hide().val(''),
-            $('#div_status_passfail').hide().val(''),
-            $('#div_statement').hide(),
-            $('#div_statement_status').hide(),
-            $('input[name="status"]').val(''),
-            $('#div_comment').hide().val(''),
-            $('#result_type').prop('disable', true).val(''),
-            $('textarea[name="statement"]').prop('readonly', true).val(''), 
-            $('select[name="status_statement"]').prop('readonly', false).val('')
-          
-        }
+        // ===== Hide semua div opsional =====
+        $('#div_result, #div_value_from, #div_value_to, #div_passfail, #div_passfail_1, #div_status_statement, #div_comment, #div_statement, #div_statement_status').hide();
+        $('.shrinkage').hide();
+        $('.formaldehyde').hide().find('input, select, textarea').val('');
+        $('.sock').hide().find('input, select, textarea').val('');
+
+        // ===== Nonaktifkan tombol tambah =====
+        $('#tambah').prop('disabled', true);
+
+    }
+
+
         </script>
-         <script>
-            function sum_method()
-            {
-                var result = document.getElementById('result').value;
-                var value_from = document.getElementById('value_from').value;
-                var value_to = document.getElementById('value_to').value;
-
-                console.log('result:', result, 'value_from:', value_from, 'value_to:', value_to );
-                
-                var result1 = parseFloat(value_from) <= parseFloat(result);
-                var result2 = parseFloat(value_to) >= parseFloat(result);
-                var result3 = parseFloat(value_to) <= parseFloat(result);
-                var result4 = parseFloat(value_from) > parseFloat(result);
-                var result5 = parseFloat(value_to) < parseFloat(result);
-                            
-                if (result1 == true && result2 == true){
-                   document.getElementById('status').value = "pass";
-                }else if(result1 == true && result3 == false){ 
-                    document.getElementById('status').value = "pass";
-                }else if(result4 == true && result2 == true){
-                    document.getElementById('status').value = "fail";
-                }else if(result5 == true){
-                    document.getElementById('status').value = "pass";
-                }else{
-                    document.getElementById('status').value = "fail";
-                }
-            }
-        </script>
-
-        <script>
-          document.addEventListener("DOMContentLoaded", function() {
-            document.querySelector("#status_statement").addEventListener("change", status_statement);
-          });
-
-          function status_statement() {
-            var status = document.querySelector("#status_statement").value;
-
-            if (status !== "Rejected") {
-              document.querySelector("#status_passfail").value = 'pass';
-            } else {
-              document.querySelector("#status_passfail").value = 'fail';
-            }
-          }
-        </script>
+   
               
         <script>
-            function hitung_status()
-            {
-                let table = document.getElementById("keranjang_method");
-                let status_td = table.querySelectorAll("td.status");
-                let result_td = table.querySelector("td.result_status");
-                let p_counter = 0
-                let f_counter = 0
-                let pass = 'pass';
-                let fail = 'fail';
+         function hitung_status() {
+            let table = document.getElementById("keranjang_method");
+            let status_td = table.querySelectorAll("td.status");
+            let p_counter = 0;
+            let f_counter = 0;
 
-                for (let i = 0; i < status_td.length; i++) {
-                v = status_td[i].innerText
-                if(v === 'pass')
-                { p_counter += 1}
-                else {f_counter += 1}
+            for (let i = 0; i < status_td.length; i++) {
+                let v = status_td[i].innerText.toLowerCase().trim();
+
+                if (v.includes('fail')) {
+                    f_counter++;
+                } else if (v.includes('pass')) {
+                    p_counter++;
                 }
-
-                 if(f_counter > 0) {
-                    console.log(fail)
-                    text = "fail";
-                    document.getElementById('result_status').value = "fail";
-                    document.querySelector('input[name="result_status"]').value="fail";
-                 }else { 
-                    console.log(pass)
-                    text = "pass";
-                    document.getElementById('result_status').value = "pass";
-                    document.querySelector('input[name="result_status"]').value = "pass";
-                 }
-                
-                 document.getElementById("result_status").innerHTML = text;
-             
-                //document.getElementsByName("result_status_hidden").innerHTML = text;
-                //document.querySelector('input[name="result_status"]').innerHTML = text;   
-                console.log(p_counter)
-                console.log(f_counter)
             }
+
+            let text = (f_counter > 0) ? "fail" : "pass";
+
+            // update tampilan
+            document.getElementById('result_status_text').innerHTML = text;
+            document.getElementById('result_status').value = text;
+
+            // RETURN INI YANG WAJIB ADA
+            return text;
+        }
+
         </script>
 
           <script>
@@ -932,5 +1083,931 @@ const barChart = new Chart(ctxBar, {
         }
     });
 }
+
+</script>
+<script>
+$(document).ready(function(){
+  $('#confirmSave').on('click', function(){
+    $('#confirmModal').modal('hide'); // tutup modal
+    $('#myForm').submit(); // jalankan submit form
+  });
+});
+</script>
+<script>
+document.getElementById('exportExcel').addEventListener('click', function() {
+  window.location.href = "<?= site_url('c_transaksi/dashboard_excel') ?>";
+});
+</script>
+<script>
+$(document).ready(function(){
+  // Ketika tombol Release diklik
+  $('.btn-release').on('click', function(e){
+    e.preventDefault();
+    const id = $(this).data('id');
+    const report = $(this).data('report');
+
+    // Masukkan data ke modal
+    $('#modal_id_penerimaan').val(id);
+    $('#modal_report_no').val(report);
+
+    // Tampilkan modal
+    $('#releaseModal').modal('show');
+  });
+});
+</script>
+<script>
+$(document).ready(function() {
+    var table = $('#orderTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "<?= base_url('index.php/c_transaksi/get_order_ajax') ?>",
+            type: "GET"
+        },
+        columns: [
+            { 
+                data: null, 
+                render: function (data, type, row, meta) {
+                    // auto numbering
+                    return meta.row + meta.settings._iDisplayStart + 1;
+                },
+                className: "text-center"
+            },
+            { data: 'id_order', visible: false},
+            { data: 'working_number' },
+            { data: 'item_name' },
+            { data: 'brand' },
+            { data: 'order_number' },
+            { data: 'costumer_name' },
+            { data: 'article_no' },
+            { data: 'color' },
+            { data: 'po_quantity' },
+            { data: 'podd' },
+            { data: 'lco' },
+            { data: 'production_date' },
+            { data: 'season' },
+            { data: 'line' },
+            {
+                data: null,
+                render: function (data, type, row) {
+                    const baseUrl = "<?php echo base_url('index.php/c_transaksi'); ?>";
+                  return `
+                        <div class="btn-group" role="group">
+                            <a href="${baseUrl}/detail_order/${row.id_order}" class="btn btn-info btn-sm">
+                                <i class="fas fa-eye"></i> Detail
+                            </a>
+                            <a href="${baseUrl}/edit_order/${row.id_order}" class="btn btn-warning btn-sm text-white" hidden>
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <button class="btn btn-danger btn-sm delete-btn" data-id="${row.id_order}" hidden>
+                                <i class="fas fa-trash"></i> Hapus
+                            </button>
+                        </div>
+                        `;
+                }
+            }
+        ]
+    });
+
+    // Contoh event handler tombol "Pilih"
+    $('#orderTable').on('click', '.pilih-btn', function() {
+        let id = $(this).data('id');
+        alert('Kamu pilih order ID: ' + id);
+        // di sini bisa redirect atau autofill form
+    });
+});
+
+</script>
+<script>
+   $(document).ready(function() {
+
+    $('#order_number').select2();
+
+    $('#order_number').on('change', function() {
+        let select = $(this).val();
+
+        if (select === 'other') {
+            $('#other_container').slideDown('fast');
+        } else {
+            $('#other_container').slideUp('fast');
+            $('#other_order_number').val('');
+        }
+    });
+
+});
+
+</script>
+<script>
+$('#order_number').on('change', function() {
+    let orderNumber = $(this).val();
+
+    if (orderNumber === 'other') {
+        $('#other_order_number').show().val('');
+        $('#order_number, #costumer_code, #costumer_name, #article_no, #color, #age, #working_numer, #item_name, #exception, #functional, #hangtag, #style, #podd, #lco, #po_quantity, #production_date, #season, #size, #line, #factory_discleamer, #brand').val('');
+        return;
+    }
+
+    $('#other_order_number').hide();
+
+    $.ajax({
+      url: "<?= site_url('c_transaksi/get_dataorder') ?>",
+      type: "POST",
+      data: { order_number: orderNumber },
+      dataType: "json",
+      success: function(data) {
+          if (data) {
+              $('#order_number').val(data.order_number);
+              $('#costumer_code').val(data.costumer_code);
+              $('#costumer_name').val(data.costumer_name);
+              $('#article_no').val(data.article_no);
+              $('#color').val(data.color);
+              $('#age').val(data.age);
+              $('#working_number').val(data.working_number);
+              $('#item_name').val(data.item_name);
+              $('#exception').val(data.exception);
+              $('#functional').val(data.functional);
+              $('#hangtag').val(data.hangtag);
+              $('#style').val(data.style);
+              $('#podd').val(data.podd);
+              $('#lco').val(data.lco);
+              $('#po_quantity').val(data.po_quantity);
+              $('#production_date').val(data.production_date);
+              $('#season').val(data.season);
+              $('#size').val(data.size);
+              $('#line').val(data.line);
+              $('#factory_discleamer').val(data.factory_discleamer);
+              $('#brand').val(data.brand);
+          } else {
+              $('#order_number, #costumer_code, #costumer_name, #article_no, #color, #age, #working_numer, #item_name, #exception, #functional, #hangtag, #style, #podd, #lco, #po_quantity, #production_date, #season, #size, #line, #factory_discleamer, #brand').val('');
+          }
+      },
+      error: function(xhr, status, error) {
+          console.error("AJAX Error:", error);
+          alert('Gagal mengambil data order. Coba periksa URL di controller.');
+      }
+  });
+});
+</script>
+<script>
+// Ketika pilih Test Matrix
+$('#id_testmatrix').on('change', function() {
+    if ($(this).val() === '') reset();
+    else {
+        $.ajax({
+            url: "<?= site_url('c_transaksi/get_all_method') ?>",
+            type: 'POST',
+            dataType: 'json',
+            data: { id_testmatrix: $(this).val() },
+            success: function(data) {
+                $('input[name="id_testmethod"]').val(data.id_testmethod);
+                $('#method_code').val(data.method_code);
+                $('input[name="title_row"]').val(data.method_name);
+                $('input[name="measurement_row"]').val(data.measurement);
+                $('#value_from_row').val(data.value_from);
+                $('#value_to_row').val(data.value_to);
+
+                $('#result').val(''); // kosongkan result dulu
+                $('#status_numeric').val('');
+                $('#status_display').html('');
+
+                $('#div_result').hide(); // tampilkan input result
+                $('select#result_type').prop('disabled', false);
+                $('button#tambah').prop('disabled', false);
+            }
+        });
+    }
+});
+
+// Hitung status ketika user mengetik result
+$('#result').on('keyup', function() {
+    const status = sum_method();
+    $('#status_numeric').val(status);
+    $('#status_display').html('<strong>' + status + '</strong>');
+});
+
+function sum_method() {
+
+    const from   = parseInterval($('#value_from_row').val());
+    const to     = parseInterval($('#value_to_row').val());
+    const result = parseInterval($('#result').val());
+
+    if (!from || !to || !result) return "fail";
+
+    const lowerLimit = from.max;
+    const upperLimit = to.max;
+
+    // belum menyentuh batas bawah
+    if (result.max < lowerLimit) return "fail";
+
+    // sudah melewati batas atas
+    if (result.min > upperLimit) return "fail";
+
+    return "pass";
+}
+
+
+
+
+function updateStatusSock(el) {
+  const status = el.value?.trim() || '';
+  const result = (status !== "Rejected") ? 'pass' : 'fail';
+
+  const target = document.querySelector("#status_sock");
+  if (target) {
+    target.value = result;
+  }
+}
+
+
+
+
+function status_boolean() {
+    const status1 = document.querySelector("#result_passfail")?.value || '';
+    const status2 = document.querySelector("#result_passfail1")?.value || '';
+
+    // Logika: pass kalau kedua dropdown bukan "Rejected"
+    const result = (status1 && status2) ? ((status1 !== "Rejected" && status2 !== "Rejected") ? 'pass' : 'fail') : '';
+
+    // Set ke input status_boolean kalau ada
+    const statusInput = document.getElementById('status_boolean');
+    if (statusInput) {
+        statusInput.value = result;
+    }
+
+    console.log({ status1, status2, result });
+    return result;
+}
+
+// Trigger otomatis saat dropdown berubah
+document.querySelectorAll('.result_passfail, .result_passfail1').forEach(el => {
+    el.addEventListener('change', status_boolean);
+});
+
+// Parsing input angka dengan +, -, %
+function parseNumber(val){
+    if(!val) return null;
+    val = val.trim().replace('%','');
+    let offset = 0;
+    if(val.endsWith('+')) offset = 0.25;
+    if(val.endsWith('-')) offset = -0.25;
+    val = val.replace(/[+-]/g,'');
+    const num = parseFloat(val);
+    return isNaN(num) ? null : num + offset;
+}
+
+// Update AC, input actual shrinkage, status
+function updateWashDisplay(afId, acDisplayId, acInputId, statusDisplayId){
+    const be = parseNumber(document.getElementById('be_wash').value);
+    const af = parseNumber(document.getElementById(afId).value);
+    const acSpan = document.getElementById(acDisplayId);
+    const acInput = document.getElementById(acInputId);
+    const statusSpan = document.getElementById(statusDisplayId);
+
+    if(be !== null && af !== null){
+        const ac = ((af - be) / be) * 100;
+        acSpan.textContent = ac.toFixed(2) + '%';
+        acInput.value = ac.toFixed(2);
+        const status = (ac >= -5 && ac <= 5) ? 'Pass' : 'Fail';
+        statusSpan.textContent = status;
+        statusSpan.style.color = (status === 'Pass') ? 'green' : 'red';
+    } else {
+        acSpan.textContent = '';
+        acInput.value = '';
+        statusSpan.textContent = '';
+    }
+
+    updateGlobalStatus();
+}
+
+// Update global shrinkage
+function updateGlobalStatus(){
+    const statuses = ['status_ac_wash_1_display','status_ac_wash_5_display','status_ac_wash_15_display']
+        .map(id => document.getElementById(id).textContent)
+        .filter(v => v !== '');
+
+    let global = '';
+    if(statuses.length > 0){
+        global = statuses.includes('Fail') ? 'Fail' : 'Pass';
+    }
+
+    document.getElementById('status_shrinkage').value = global;
+    document.querySelector('input[name="status"]').value = global;
+}
+
+// Event listener
+document.addEventListener('DOMContentLoaded', function() {
+    ['1','5','15'].forEach(id => {
+        const afInput = document.getElementById(`af_wash_${id}`);
+        afInput.addEventListener('input', () => {
+            updateWashDisplay(
+                `af_wash_${id}`,
+                `ac_wash_${id}_display`,
+                `ac_wash_${id}`,
+                `status_ac_wash_${id}_display`
+            );
+        });
+    });
+
+    const beInput = document.getElementById('be_wash');
+    beInput.addEventListener('input', () => {
+        ['1','5','15'].forEach(id => {
+            updateWashDisplay(
+                `af_wash_${id}`,
+                `ac_wash_${id}_display`,
+                `ac_wash_${id}`,
+                `status_ac_wash_${id}_display`
+            );
+        });
+    });
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelector("#status_statement").addEventListener("change", status_statement);
+});
+
+  function status_statement() {
+        var status = document.querySelector("#status_statement").value;
+        var passfailElem = document.querySelector("#status_statement_result");
+
+        if (!passfailElem) return;
+
+        if (status !== "Rejected") {
+            passfailElem.value = 'pass';
+        } else {
+            passfailElem.value = 'fail';
+        }
+    }
+
+    function parseInterval(val) {
+    if (!val) return null;
+
+    val = val.toString().trim().replace("%", "");
+
+    if (val.startsWith("<=")) return { min: -Infinity, max: parseFloat(val.slice(2)) };
+    if (val.startsWith("<"))  return { min: -Infinity, max: parseFloat(val.slice(1)) };
+    if (val.startsWith(">=")) return { min: parseFloat(val.slice(2)), max: Infinity };
+    if (val.startsWith(">"))  return { min: parseFloat(val.slice(1)), max: Infinity };
+
+    if (/^-?\d+(\.\d+)?\s*-\s*-?\d+(\.\d+)?$/.test(val)) {
+        let [a, b] = val.split("-").map(v => parseFloat(v));
+        return { min: Math.min(a, b), max: Math.max(a, b) };
+    }
+
+    let num = parseFloat(val);
+    if (!isNaN(num)) return { min: num, max: num };
+
+    return null;
+}
+
+function status_formaldehyde_result() {
+
+    const resultVal = document.querySelector('input[name="result_formaldehyde"]')?.value;
+    const fromVal   = document.getElementById('value_from_row')?.value;
+    const toVal     = document.getElementById('value_to_row')?.value;
+    const statusEl  = document.querySelector('input[name="status_formaldehyde"]');
+
+    if (!statusEl) return;
+
+    const from   = parseInterval(fromVal);
+    const to     = parseInterval(toVal);
+    const result = parseInterval(resultVal);
+
+    if (!from || !to || !result) {
+        statusEl.value = "";
+        return;
+    }
+
+    const lowerLimit = from.max; // batas bawah efektif
+    const upperLimit = to.max;   // batas atas efektif
+
+    // batas tidak masuk akal
+    if (lowerLimit > upperLimit) {
+        statusEl.value = "fail";
+        return;
+    }
+
+    const pass =
+        result.max >= lowerLimit &&  // menyentuh batas bawah
+        result.min <= upperLimit;    // tidak lewat batas atas
+
+    statusEl.value = pass ? "pass" : "fail";
+}
+
+</script>
+<script>
+function cekUkuranFile(input) {
+    const file = input.files[0];
+
+    if (!file) return;
+
+    const maxSize = 5 * 1024 * 1024; // 5 MB
+
+    if (file.size > maxSize) {
+        alert('Ukuran file terlalu besar. Maksimal 5 MB.');
+        input.value = ''; // reset file
+    }
+}
+</script>
+<!--------DARI TEST RESULT--------------->
+    <script>
+          function enterFashion() {
+              var key = window.event.keyCode;
+
+              // If the user has pressed enter
+              if (key === 13) {
+                  document.getElementById("fashion").value = document.getElementById("fashion").value + "\n";
+                  return false;
+              }
+              else {
+                  return true;
+              }
+          }
+        </script>
+         <script>
+          function enterHybrid() {
+              var key = window.event.keyCode;
+
+              // If the user has pressed enter
+              if (key === 13) {
+                  document.getElementById("hybrid").value = document.getElementById("hybrid").value + "\n";
+                  return false;
+              }
+              else {
+                  return true;
+              }
+          }
+        </script>
+         <script>
+          function enterRemarks() {
+              var key = window.event.keyCode;
+
+              // If the user has pressed enter
+              if (key === 13) {
+                  document.getElementById("txtremarks").value = document.getElementById("txtremarks").value + "\n";
+                  return false;
+              }
+              else {
+                  return true;
+              }
+          }
+        </script>
+      <!---script>
+        setTimeout(() => {
+          $.ajax({
+            url:"<= site_url('c_transaksi/index_order') ?>",
+            type: "GET",
+            dataType:"",
+            cache:"false",
+            success:function($data)
+            {
+              $('#example2').html($data);
+            }
+          })
+        }, 2000);
+      </script-->
+      <script>
+        $(document).ready(function(){
+          $('tfoot').hide()
+
+          $(document).keypress(function(event){
+                if (event.which == '13') {
+                    event.preventDefault();
+                }
+            })
+
+          /*$('#rema').on('change', function(){
+            $('button#tambahreqmin').prop('disabled', false)
+            $('input[name="remarks_min1"]').prop('readonly',false)
+            $('input[name="fc"]').prop('readonly',false)
+            $('input[name="hp"]').prop('readonly',false)
+            $('input[name="remarks_min2"]').prop('readonly',false)
+            $('input[name="fchp"]').prop('readonly',false)
+
+            $.ajax({
+              type:'POST',
+              dataType: 'json',
+              data: {nama_req: $(this).val()},
+              success: function(data){
+                $('button#tambahreqmin').prop('disabled', false);
+              }
+            })
+          })*/
+
+          $(document).on('click', '#tambahreqmin', function(e){
+            const data_req = {
+              remarks_min1: $('textarea[name="remarks_min1"]').val(),
+              fc: $('input[name="fc"]').val(),
+              hp: $('input[name="hp"]').val(),
+              remarks_min2: $('textarea[name="remarks_min2"]').val(),
+              fchp: $('input[name="fchp"]').val(),
+              }
+            $.ajax({
+              type: 'POST',
+              url: "<?=site_url('c_mastermethod/keranjang_reqmin') ?>",
+              data:data_req,
+              success: function(data){
+                $('table#keranjang_reqmin tbody').append(data);
+                $('tfoot').show()
+              },
+              error:function(){
+                alert('error');
+              }
+            })
+          })
+
+          $(document).on('click', '#tombol-hapus-req', function(){
+            $(this).closest('.row-keranjang-min').remove()
+
+            $('option')
+          })
+        })
+      </script>
+      <script>
+        function openCity(evt, cityName) {
+          var i, tabcontent, tablinks;
+          tabcontent = document.getElementsByClassName("tabcontent");
+          for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+          }
+          tablinks = document.getElementsByClassName("tablinks");
+          for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+          }
+          document.getElementById(cityName).style.display = "block";
+          evt.currentTarget.className += " active";
+        }
+      </script>
+      <script>
+            $(function() {
+              cbpHorizontalMenu.init();
+            });
+
+            $(function () {
+                $('select#product_type').select2();
+            });
+      </script>
+<script>
+  $(function () {
+    var areaChartCanvas = $('#barChart').get(0).getContext('2d')
+    var areaChartCanvasMaterial = $('#barChartMaterial').get(0).getContext('2d')
+    var areaChartData = {
+      labels  : ['Januari', 'Februari', 'Maret' ],
+      datasets: [
+        {
+          label               : 'Pass',
+          backgroundColor     : 'rgba(60,141,188,0.9)',
+          borderColor         : 'rgba(60,141,188,0.8)',
+          pointRadius          : false,
+          pointColor          : '#3b8bba',
+          pointStrokeColor    : 'rgba(60,141,188,1)',
+          pointHighlightFill  : '#fff',
+          pointHighlightStroke: 'rgba(60,141,188,1)',
+          data                : [28, 48, 40, 19, 86, 27, 90]
+        },
+        {
+          label               : 'Fail',
+          backgroundColor     : 'rgba(210, 214, 222, 1)',
+          borderColor         : 'rgba(210, 214, 222, 1)',
+          pointRadius         : false,
+          pointColor          : 'rgba(210, 214, 222, 1)',
+          pointStrokeColor    : '#c1c7d1',
+          pointHighlightFill  : '#fff',
+          pointHighlightStroke: 'rgba(220,220,220,1)',
+          data                : [65, 59, 80, 81, 56, 55, 40]
+        },
+      ]
+    }
+
+ 
+    //-------------
+    //- BAR CHART -
+    //-------------
+    var barChartCanvas = $('#barChart').get(0).getContext('2d')
+    var barChartData = $.extend(true, {}, areaChartData)
+    var temp0 = areaChartData.datasets[0]
+    var temp1 = areaChartData.datasets[1]
+    barChartData.datasets[0] = temp1
+    barChartData.datasets[1] = temp0
+
+    var barChartOptions = {
+      responsive              : true,
+      maintainAspectRatio     : false,
+      datasetFill             : false
+    }
+
+    new Chart(barChartCanvas, {
+      type: 'bar',
+      data: barChartData,
+      options: barChartOptions
+    })
+
+    var barChartCanvas = $('#barChartMaterial').get(0).getContext('2d')
+    var barChartData = $.extend(true, {}, areaChartData)
+    var temp0 = areaChartData.datasets[0]
+    var temp1 = areaChartData.datasets[1]
+    barChartData.datasets[0] = temp1
+    barChartData.datasets[1] = temp0
+
+    var barChartOptions = {
+      responsive              : true,
+      maintainAspectRatio     : false,
+      datasetFill             : false
+    }
+
+    new Chart(barChartCanvas, {
+      type: 'bar',
+      data: barChartData,
+      options: barChartOptions
+    })
+
+  })
+  </script>
+  <script>
+    $('#result_type').on('change', function () {
+
+    const type = $(this).val();
+    const mode = $('#form_mode').val(); // add / edit
+    const isAdd = mode === 'add';
+
+    if (type === 'Boolean') {
+        $('#pass_fail').prop('disabled', false);
+
+        $('input[name="uom"]').prop('disabled', true);
+        $('input[name="value_to"]').prop('disabled', true);
+        $('input[name="value_from"]').prop('disabled', true);
+       $('#statementMatrix')..prop('disabled', true);
+
+        if (isAdd) {
+            $('input[name="uom"]').val('');
+            $('input[name="value_to"]').val('');
+            $('input[name="value_from"]').val('');
+            $('#statementMatrix')..val('');
+        }
+    }
+
+    if (type === 'Number') {
+        $('#pass_fail').prop('disabled', true);
+        $('input[name="uom"]').prop('disabled', false);
+        $('input[name="value_to"]').prop('disabled', false);
+        $('input[name="value_from"]').prop('disabled', false);
+        $('#statementMatrix').prop('disabled', true);
+
+        if (isAdd) {
+            $('#pass_fail').val('');
+           $('#statementMatrix').val('');
+        }
+    }
+
+    if (type === 'Statement') {
+        $('#statementMatrix').prop('disabled', false);
+
+        $('input[name="uom"]').prop('disabled', true);
+        $('input[name="value_to"]').prop('disabled', true);
+        $('input[name="value_from"]').prop('disabled', true);
+        $('#pass_fail').prop('disabled', true);
+
+        if (isAdd) {
+            $('input[name="uom"]').val('');
+            $('input[name="value_to"]').val('');
+            $('input[name="value_from"]').val('');
+            $('#pass_fail').val('');
+        }
+
+        console.log('type:', type);
+        console.log(
+            'statement disabled:',
+            $('#statementMatrix').prop('disabled')
+        );
+    }
+});
+
+$(document).ready(function () {
+    $('#result_type').trigger('change');
+});
+
+  </script>
+  <script>
+    function validasiEkstensi(){
+        var inputFile = document.getElementById('gambar');
+        var pathFile = inputFile.value;
+        var ekstensiOk = /(\.jpg|\.jpeg|\.png|\.gif)$/i;
+        var fileSize = inputFile.files[0].size / 1024 / 1024;
+    
+        if(!ekstensiOk.exec(pathFile)){
+            alert('Silakan upload foto yang dengan ekstensi .jpeg/.jpg/.png!');
+            inputFile.value = '';
+            return false;
+        }else if(fileSize > 2){
+          alert('Silahkan upload foto kurang dari 2MB!');
+            inputFile.value = '';
+            return false;
+        }else{
+            // Preview gambar
+            if (inputFile.files && inputFile.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('preview').innerHTML = '<img src="'+e.target.result+'" style="height:300px"/>';
+                };
+                reader.readAsDataURL(inputFile.files[0]);
+            }
+        }
+      }
+  </script>
+  <script>
+    function validasiEkstensi1(){
+        var inputFile = document.getElementById('simbol_care');
+        var pathFile = inputFile.value;
+        var ekstensiOk = /(\.jpg|\.jpeg|\.png|\.gif)$/i;
+        var fileSize = inputFile.files[0].size / 1024 / 1024;
+    
+        if(!ekstensiOk.exec(pathFile)){
+            alert('Silakan upload foto yang dengan ekstensi .jpeg/.jpg/.png!');
+            inputFile.value = '';
+            return false;
+        }else if(fileSize > 2){
+          alert('Silahkan upload foto kurang dari 2MB!');
+            inputFile.value = '';
+            return false;
+        }
+      }
+  </script>
+  <script>
+    function validasiEkstensi2(){
+        var inputFile = document.getElementById('tanda_tangan');
+        var pathFile = inputFile.value;
+        var ekstensiOk = /(\.jpg|\.jpeg|\.png|\.gif)$/i;
+        var fileSize = inputFile.files[0].size / 1024 / 1024;
+    
+        if(!ekstensiOk.exec(pathFile)){
+            alert('Silakan upload foto yang dengan ekstensi .jpeg/.jpg/.png!');
+            inputFile.value = '';
+            return false;
+        }else if(fileSize > 2){
+          alert('Silahkan upload foto kurang dari 2MB!');
+            inputFile.value = '';
+            return false;
+        }
+      }
+  </script>
+  <script>
+      function hanyaAngka(evt) {
+          var charCode = (evt.which) ? evt.which : event.keyCode
+          if (charCode > 31 && (charCode < 48 || charCode > 57) && (charCode ))
+          
+          return false;
+          return true;
+      }
+  </script>
+  <script>
+       function isNumberKey(evt)
+       {
+          var charCode = (evt.which) ? evt.which : evt.keyCode;
+          if (charCode != 46 && charCode > 31 && charCode != 43 && charCode != 45 && charCode != 37
+            && (charCode < 48 || charCode > 57 )){
+              alert('Format yang anda masukan tidak sesuai!');
+              return false;
+            } 
+          return true;
+       }
+
+      function isReportNo(evt) {
+            var charCode = (evt.which) ? evt.which : evt.keyCode;
+            if (charCode === 47) { // '/' = 47
+                alert('Format yang anda masukkan tidak sesuai"/" !');
+                return false;
+            }
+            return true;
+        }
+
+        function checkReportNo(input) {
+            if (input.value.includes('/')) {
+                alert('Format yang anda masukkan tidak sesuai "/" !');
+                input.value = input.value.replace(/\//g, ''); // hapus semua '/'
+            }
+        }
+    </script>
+<script>
+$(document).ready(function () {
+
+    $.ajax({
+        url: "<?= base_url('index.php/qad/get_total_wash'); ?>",
+        type: "GET",
+        dataType: "json",
+        success: function (res) {
+
+            const ctx = document.getElementById('washChart').getContext('2d');
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: res.labels,
+                    datasets: [{
+                        label: 'Total Wash (per 30.000)',
+                        data: res.data,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            },
+                            title: {
+                                display: true,
+                                text: 'Jumlah Wash'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Working Number'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+
+        }
+    });
+
+});
+</script>
+<script>
+$(document).ready(function () {
+
+    $.ajax({
+        url: "<?= base_url('index.php/qad/get_fgt_chart'); ?>",
+        type: "GET",
+        dataType: "json",
+        success: function (res) {
+
+            const total =
+                Number(res.going_to_be_test) +
+                Number(res.tested) +
+                Number(res.pass) +
+                Number(res.fail);
+
+            const ctx = document.getElementById('fgtChart').getContext('2d');
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: [
+                        'TESTED',
+                        'GOING TO BE TEST',
+                        'PASS',
+                        'FAIL'
+                    ],
+                    datasets: [{
+                        data: [
+                            res.tested,
+                            res.going_to_be_test,
+                            res.pass,
+                            res.fail
+                        ],
+                        backgroundColor: [
+                            '#0d6efd', // biru - TESTED
+                            '#6c757d', // abu - GOING TO BE TEST
+                            '#198754', // hijau - PASS
+                            '#dc3545'  // merah - FAIL
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const value = context.raw || 0;
+                                    const percent = total > 0
+                                        ? ((value / total) * 100).toFixed(2)
+                                        : 0;
+                                    return `${context.label}: ${value} (${percent}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+});
 
 </script>
