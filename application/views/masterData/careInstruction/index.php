@@ -17,7 +17,11 @@
             
             </div>
             <div class="col-md-2" style="padding-bottom: 1%;">
-                <a href="<?= site_url('c_transaksi/insert_careInstruction') ?>" class="btn btn-block btn-custom"><i class="fa-solid fa-plus"></i> &nbsp;Add Data</a>
+               <a href="<?= site_url('c_transaksi/insert_careInstruction') ?>"
+                class="btn btn-block"
+                style="font-size: 11px; background-color: #36454F; color: white;">
+                <i class="fa-solid fa-plus"></i> &nbsp;Add Data
+              </a>
             </div>
             <div class="col-md-12">
                 <div class="card">
