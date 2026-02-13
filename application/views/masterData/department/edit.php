@@ -4,7 +4,7 @@
           <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-left">
                 <li class="breadcrumb-item"><a href="#">Master Data</a></li>
-                <li class="breadcrumb-item active">Add Department</li>
+                <li class="breadcrumb-item active">Edit Department</li>
                 </ol>
           </div>
         </div>

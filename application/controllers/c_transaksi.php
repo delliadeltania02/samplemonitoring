@@ -924,7 +924,7 @@ public function dashboard_excel()
 	public function edit_supplier($id_supplier)
 	{
 		$where = array('id_supplier' => $id_supplier);
-		$data['edit'] = $this->m_supplier->getByIdSupplier($where, 'm_supplier')->result();
+		 $data['edit'] = $this->m_transaksi->getByIdSupplier($where, 'm_supplier')->result();
 		$this->template->load('layout/template','masterData/supplier/edit.php', $data);
 	}
 
@@ -2850,7 +2850,7 @@ public function dashboard_excel()
 	public function delete_email($id)
 	{
 		$this->db->where('id',$id);
-		$this->db->delete('m_email');
+		$this->db->delete('m_applicant');
 
 		redirect('c_transaksi/index_email');
 	}
@@ -2858,7 +2858,7 @@ public function dashboard_excel()
 	public function delete_emailOther($id)
 	{
 		$this->db->where('id',$id);
-		$this->db->delete('m_email');
+		$this->db->delete('m_applicant');
 
 		redirect('c_transaksi/index_emailOther');
 	}
