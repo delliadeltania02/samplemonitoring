@@ -91,7 +91,7 @@
             <tr>
                 <td style="width: 140px;"><strong>Test Report No</strong></td>
                 <td style="width: 10px; text-align: right;">:</td>
-                <td><?= isset($report[0]) ? $report[0]->no_final: 'N/A' ?></td>
+                <td><?= isset($report[0]) ? $report[0]->new_report_no: 'N/A' ?></td>
             </tr>
             <tr>
                 <td><strong>Date of Received</strong></td>
