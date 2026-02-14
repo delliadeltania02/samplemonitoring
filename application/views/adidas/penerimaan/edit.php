@@ -485,7 +485,7 @@
                                         <div class="col-md-12"><br>
                                             <div class="form-group">
                                                 <label>Compotition</label>
-                                                <input type="text" name="compotition" id="compotition" class="form-control" readonly>
+                                                <input type="text" name="composition" id="composition" class="form-control" readonly>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
