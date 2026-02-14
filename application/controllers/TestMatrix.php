@@ -113,12 +113,19 @@ class TestMatrix extends CI_Controller {
     }
     public function tambahaksiMatrix(){
         $data = array(
-        'id_testmethod' => $this->input->post('id_testmethod'),
-        'title'         => $this->input->post('title'),
-        'method_code'   => $this->input->post('method_code'),
-        'brand'         => $this->input->post('brand'),
-        'product_type'  => implode(',', (array)$this->input->post('product_type')),
-        'age'           => $this->input->post('age')
+        'id_testmethod'       => $this->input->post('id_testmethod'),
+        'title'               => $this->input->post('title'),
+        'method_code'         => $this->input->post('method_code'),
+        'measurement'         => $this->input->post('measurement'),
+        'brand'               => $this->input->post('brand'),
+        'product_type'        => implode(',', (array)$this->input->post('product_type')),
+        'age'                 => $this->input->post('age'),
+        'dry'                 => $this->input->post('dry'),
+        'test_level'          => $this->input->post('test_level'),
+        'technology_concept'  => $this->input->post('technology_concept'),
+        'fabric_tech'         => $this->input->post('fabric_tech'),
+        'composition'         => $this->input->post('composition'),
+        'result_type'         => $this->input->post('result_type')
     );
     $this->db->insert('tbl_testmatrix', $data);
     redirect('testMatrix/indexMatrix');
@@ -162,6 +169,7 @@ class TestMatrix extends CI_Controller {
         $pass_fail = $this->input->post('pass_fail');
         $statement = $this->input->post('statement');
         $result_type = $this->input->post('result_type');
+        $measurement = $this->input->post('measurement');
 
         $data = array(
             'id_testmatrix' => $id_testmatrix,
@@ -183,7 +191,8 @@ class TestMatrix extends CI_Controller {
             'composition' => $composition,
             'pass_fail' => $pass_fail,
             'statement' => $statement,
-            'result_type' => $result_type
+            'result_type' => $result_type,
+            'measurement' => $measurement,
         );
 
         $this->db->where('id_testmatrix', $id_testmatrix);

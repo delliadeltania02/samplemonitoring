@@ -109,6 +109,11 @@
         border-bottom-left-radius: 10px;
         border-bottom-right-radius: 10px;
     }
+    .required::after {
+    content: " *";
+    color: red;
+    font-weight: bold;
+    }
 </style>
 
 <div class="content-header">
@@ -132,9 +137,9 @@
                                 <div class="row">
                                     <div class="col-md-12 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Test Method ID</label>
+                                            <label class="required">Test Method ID</label>
                                             <select name="id_testmethod" class="form-control select2" id="id_testmethod" required>
-                                                <option selected disabled>Select</option>
+                                                <option value="">Select</option>
                                                 <?php foreach ($testmethod as $u): ?>
                                                         <option value="<?= $u->id_testmethod?>"><?= $u->method_id ?></option>
                                                 <?php endforeach ?>
@@ -143,14 +148,16 @@
                                     </div>
                                     <div class="col-md-6 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Test Method Name</label>
+                                            <label class="required">Test Method Name</label>
                                             <input name="title"  class="form-control" required>
+                                            <option value=""></option>
                                         </div>
                                     </div>
                                     <div class="col-md-6 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Test Method Code</label>
+                                            <label class="required">Test Method Code</label>
                                             <input name="method_code"  class="form-control" required>
+                                            <option value=""></option>
                                         </div>
                                     </div>
                                 <div class="col-md-6 pl-pr-1">
@@ -161,9 +168,9 @@
                                 </div>
                                 <div class="col-md-3 pl-pr-1">
                                     <div class="form-group">
-                                        <label>Age</label>
+                                        <label class="required">Age</label>
                                         <select name="age" id="age" class="form-control" required> 
-                                        <option selected disabled>Select</option>
+                                        <option value="">Select</option>
                                         <?php foreach($age as $u):?>
                                             <option value="<?= $u->age ?>"><?= $u->age?></option>
                                         <?php endforeach ?>
@@ -174,7 +181,7 @@
                                     <div class="form-group">
                                         <label>Dry Process</label>
                                         <select name="dry" id="dry" class="form-control"> 
-                                        <option selected disabled>Select</option>
+                                        <option value="">Select</option>
                                         <option value="Line Dry/Flat Dry">Line Dry/Flat Dry</option>
                                         <option value="Tumble Dry">Tumble Dry</option>
                                         <option value="All">All</option>
@@ -184,9 +191,9 @@
                                 </div>
                                     <div class="col-md-3 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Buyer</label>
+                                            <label class="required">Buyer</label>
                                             <select name="brand" class="form-control" required>
-                                                <option selected disabled>Select</option>
+                                                <option value="">Select</option>
                                                 <?php foreach ($brand as $u): ?>
                                                     <option value="<?= $u->brand ?>"><?= $u->brand?></option>
                                                 <?php endforeach ?>
@@ -195,7 +202,7 @@
                                     </div>
                                     <div class="col-md-3 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Product Type</label>
+                                            <label class="required">Product Type</label>
                                             <select name="product_type[]"  id="product_type" class="form-control selectpicker" multiple required>
                                                     <option disabled>Select</option>
                                                         <?php foreach($producttype as $u): ?>
@@ -212,9 +219,9 @@
                                     </div>
                                     <div class="col-md-3 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Technology Concept</label>
+                                            <label class="required">Technology Concept</label>
                                             <select name="technology_concept" class="form-control" required>
-                                                <option selected disabled>Select</option>
+                                                <option value="">Select</option>
                                                 <option value="TECHFIT">TECHFT</option>
                                                 <option value="TECHFIT RECHARGER">TECHFIT RECHARGER</option>
                                                 <option value="CONTROL">CONTROL</option>
@@ -227,7 +234,7 @@
                                             <div class="form-group">
                                                 <label>Fabric Tech</label>
                                                 <select name="fabric_tech" class="form-control">
-                                                    <option selected disabled>Select</option>
+                                                    <option value="">Select</option>
                                                     <option value="K">K : Knit</option>
                                                     <option value="W">W : Woven</option>
                                                     <option value="KW"> KN : Knit Woven </option>
@@ -238,7 +245,7 @@
                                         <div class="form-group">
                                             <label>Composition</label>
                                             <select name="composition" class="form-control">
-                                                <option selected disabled>Select</option>
+                                                <option value="">Select</option>
                                                 <option value="N">N: Natural</option>
                                                 <option value="S">S: Synthetic</option>
                                                 <option value="NS">NS: Natural Synthetic</option>
@@ -247,9 +254,9 @@
                                     </div>
                                     <div class="col-md-3 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Test Result Type</label>
+                                            <label class="required">Test Result Type</label>
                                             <select name="result_type" id="result_type" class="form-control" required>
-                                                <option selected disabled>Select</option>
+                                                <option value="">Select</option>
                                                 <option value="Boolean">Boolean</option>
                                                 <option value="Number">Number</option>
                                                 <option value="Statement">Statement</option>
@@ -281,7 +288,7 @@
                                         <div class="form-group">
                                             <label>Pass/Fail</label>
                                             <select name="pass_fail" id="pass_fail" class="form-control" disabled>
-                                                <option selected disabled>Select</option>
+                                                <option value="">Select</option>
                                                 <option value="Accepted">Accepted</option>
                                                 <option value="Rejected">Rejected</option>
                                             </select>

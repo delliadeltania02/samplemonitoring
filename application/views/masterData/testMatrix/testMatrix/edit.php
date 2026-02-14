@@ -109,6 +109,11 @@
         border-bottom-left-radius: 10px;
         border-bottom-right-radius: 10px;
     }
+    .required::after {
+    content: " *";
+    color: red;
+    font-weight: bold;
+    }
 </style>
 
 <div class="content-header">
@@ -134,9 +139,10 @@
                                     <div class="col-md-12 pl-pr-1">
                                         <div class="form-group">
                                             <input type="hidden" name="id_testmatrix" value="<?php echo $u->id_testmatrix ?>">
-                                            <label>Test Method ID</label>
+                                            <label class="required">Test Method ID</label>
                                             <select name="id_testmethod" class="form-control select2" required>
-                                                <option selected disabled>Select</option>
+                                                <option value="">Select</option>
+                                                <option value="">Select</option>
                                                 <?php foreach ($testmethod as $m): ?>
                                                     <option <?php echo ( $m->id_testmethod== $u->id_testmethod) ? "selected": "" ?>><?php echo $m->id_testmethod.". ".$m->method_id; ?></option>
                                                 <?php endforeach ?>
@@ -145,14 +151,16 @@
                                     </div>
                                     <div class="col-md-6 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Test Method Name</label>
+                                            <label class="required">Test Method Name</label>
                                             <input name="title"  class="form-control" value="<?php echo $u->title ?>" required>
+                                            <option value=""></option>
                                         </div>
                                     </div>
                                     <div class="col-md-6 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Test Method Code</label>
+                                            <label class="required">Test Method Code</label>
                                             <input name="method_code"  class="form-control" value="<?php echo $u->method_code; ?>" required>
+                                                    <option value=""></option>
                                         </div>
                                     </div>
                                 <div class="col-md-6 pl-pr-1">
@@ -163,9 +171,9 @@
                                 </div>
                                 <div class="col-md-3 pl-pr-1">
                                     <div class="form-group">
-                                        <label>Age</label>
+                                        <label class="required">Age</label>
                                         <select name="age" id="age" class="form-control" required> 
-                                        <option selected disabled>Select</option>
+                                        <option value="">Select</option>
                                         <?php foreach($age as $m):?>
                                             <option value="<?php echo $u->age; ?>"<?php if($m->age==$u->age) echo "selected"; ?>><?php echo $m->age; ?></option>
                                         <?php endforeach ?>
@@ -177,7 +185,7 @@
                                         <label>Dry Process</label>
                                         <?php $dry = $u->dry; ?>
                                         <select name="dry" id="dry" class="form-control"> 
-                                        <option selected disabled>Select</option>
+                                        <option value="">Select</option>
                                         <option <?php echo ($dry == 'Line Dry/Flat Dry') ? "selected": "" ?>>Line Dry/Flat Dry</option>
                                         <option <?php echo ($dry == 'Tumble Dry') ? "selected": "" ?>>Tumble Dry</option>
                                         <option <?php echo ($dry == 'All') ? "selected": "" ?>>All</option>
@@ -187,9 +195,9 @@
                                 </div>
                                     <div class="col-md-3 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Buyer</label>
+                                            <label class="required">Buyer</label>
                                             <select name="brand" class="form-control" required>
-                                                <option selected disabled>Select</option>
+                                                <option value="">Select</option>
                                                     <?php foreach ($brand as $m): ?>
                                                         <option value="<?php echo $u->brand; ?>"<?php if($m->brand==$u->brand) echo "selected"; ?>><?php echo $m->brand; ?></option>
                                                     <?php endforeach ?>
@@ -198,7 +206,7 @@
                                     </div>
                                     <div class="col-md-3 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Product Type</label>
+                                            <label class="required">Product Type</label>
                                             <select name="product_type[]" id="product_type" class="form-control selectpicker" multiple="multiple" required>
                                                     <option disabled>Select</option>
                                                     <?php 
@@ -220,10 +228,10 @@
                                     </div>
                                     <div class="col-md-3 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Technology Concept</label>
+                                            <label class="required">Technology Concept</label>
                                             <?php $technology_concept = $u->technology_concept; ?>
                                             <select name="technology_concept" class="form-control" required>
-                                                <option selected disabled>PILIH</option>
+                                                <option value="">Select</option>
                                                 <option <?php echo ($technology_concept == 'TECHFIT') ? "selected": "" ?>>TECHFIT</option>
                                                 <option <?php echo ($technology_concept == 'TECHFIT RECHARGER') ? "selected": "" ?>>TECHFIT RECHARGER</option>
                                                 <option <?php echo ($technology_concept == 'CONTROL') ? "selected": "" ?>>CONTROL</option>
@@ -237,11 +245,10 @@
                                                 <label>Fabric Tech</label>
                                                 <?php $fabric = $u->fabric_tech; ?>
                                                 <select name="fabric_tech" class="form-control">
-                                                    <option selected disabled>Select</option>
-                                                    <option <?php echo ($fabric == 'K') ? "selected": "" ?>>K : Knit</option>
-                                                    <option <?php echo ($fabric == 'W') ? "selected": "" ?>>W : Woven</option>
-                                                    <option <?php echo ($fabric == 'KW') ? "selected": "" ?>>KW : Knit Woven </option>
-                                                    
+                                                    <option value="">Select</option>
+                                                    <option value="K"  <?= ($fabric == 'K') ? 'selected' : '' ?>>K : Knit</option>
+                                                    <option value="W"  <?= ($fabric == 'W') ? 'selected' : '' ?>>W : Woven</option>
+                                                    <option value="KW" <?= ($fabric == 'KW') ? 'selected' : '' ?>>KW : Knit Woven</option>
                                                 </select>
                                             </div>
                                     </div>
@@ -250,19 +257,19 @@
                                             <label>Composition</label>
                                             <?php $composition = $u->composition ?>
                                             <select name="composition" class="form-control">
-                                                <option selected disabled>Select</option>
-                                                <option <?php echo ($composition == 'N') ? "selected": "" ?>>N: Natural</option>
-                                                <option <?php echo ($composition == 'S') ? "selected": "" ?>>S: Synthetic</option>
-                                                <option <?php echo ($composition == 'NS') ? "selected": "" ?>>NS: Natural Synthetic</option>
+                                                <option value="">Select</option>
+                                                <option value="N"  <?= ($composition == 'N')  ? 'selected' : '' ?>>N: Natural</option>
+                                                <option value="S"  <?= ($composition == 'S')  ? 'selected' : '' ?>>S: Synthetic</option>
+                                                <option value="NS" <?= ($composition == 'NS') ? 'selected' : '' ?>>NS: Natural Synthetic</option>
                                             </select>
                                         </div>
                                     </div>
                                     <div class="col-md-3 pl-pr-1">
                                         <div class="form-group">
-                                            <label>Test Result Type</label>
+                                            <label class="required">Test Result Type</label>
                                             <?php $type = $u->result_type ?>
                                             <select name="result_type" id="result_type" class="form-control" required>
-                                                <option selected disabled>Select</option>
+                                                <option value="">Select</option>
                                                 <option <?php echo ($type == 'Boolean') ? "selected": ""?>>Boolean</option>
                                                 <option <?php echo ($type == 'Number') ? "selected": "" ?>>Number</option>
                                                 <option <?php echo ($type == 'Statement') ? "selected": "" ?>>Statement</option>
@@ -295,7 +302,7 @@
                                             <label>Pass/Fail</label>
                                             <?php $pass_fail = $u->pass_fail ?>
                                             <select name="pass_fail" id="pass_fail" class="form-control" disabled>
-                                                <option selected disabled>Select</option>
+                                                <option value="">Select</option>
                                                 <option <?php echo ($pass_fail == 'Accepted') ? "selected": "" ?>>Accepted</option>
                                                 <option <?php echo ($pass_fail == 'Rejected') ? "selected": "" ?>>Rejected</option>
                                             </select>
