@@ -65,20 +65,14 @@
                             <?php endif; ?>
                         </div>
                         <div class="card-footer">
-                            <div class="col-md-1"></div>
-                            <div class="col-md-10"></div>
-                            <div class="col-md-1">
-                                <ol class="float-sm-right">
-                                    <div class="card-footer">
-                                        <div class="col-md-1">
-                                            <a href="<?= site_url('c_transaksi/index_careInstruction') ?>"
-                                            type="button"
-                                            class="btn btn-block"
-                                            style="background-color: #36454F; color: white;"> Back</a>
-                                        </div>
-                                    <button type="submit" class="btn btn-block btn-primary" value="Tambah">Submit</button>
-                                </ol>
-                            </div>      
+                            <div class="row">
+                                <div class="col-md-6 text-left">
+                                    <a href="<?= site_url('c_transaksi/index_careInstruction') ?>" class="btn btn-secondary"> Back </a>
+                                </div>
+                                <div class="col-md-6 text-right">
+                                    <button type="submit" class="btn btn-primary"> Submit </button>
+                                </div>
+                            </div>
                         </div>
                     </form>
                   </div>
