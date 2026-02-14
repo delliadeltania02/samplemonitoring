@@ -1399,9 +1399,8 @@ public function dashboard_excel()
 		$existing_tests = $this->m_transaksi
 			->getTestRequiredByPenerimaan($id_penerimaan);
 
-		// cari yang baru ditambahkan
-		$new_tests = array_diff($test_required, $existing_tests);
-
+		$test_required = $this->input->post('test_required'); 
+		
 		// insert hanya yang baru
 		if (is_array($color) && is_array($color_of) && !empty($new_tests)) {
 			for ($i = 0; $i < count($color); $i++) {
