@@ -2602,9 +2602,10 @@ public function dashboard_excel()
 
 	public function tambah_penerimaan_other()
 	{
+		$this->load->model('m_login');
 		$this->load->model('m_transaksi');
 		$data['user'] = $this->m_login->current_user();
-		$this->template->load('layout/template','other/penerimaan/tambah.php', $data);
+		$this->template->load('layout/template','other/penerimaan/tambah.php',$data);
 	}
 
 	public function tambahaksi_penerimaan_other()
