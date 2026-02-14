@@ -142,7 +142,6 @@
                                             <label class="required">Test Method ID</label>
                                             <select name="id_testmethod" class="form-control select2" required>
                                                 <option value="">Select</option>
-                                                <option value="">Select</option>
                                                 <?php foreach ($testmethod as $m): ?>
                                                     <option <?php echo ( $m->id_testmethod== $u->id_testmethod) ? "selected": "" ?>><?php echo $m->id_testmethod.". ".$m->method_id; ?></option>
                                                 <?php endforeach ?>

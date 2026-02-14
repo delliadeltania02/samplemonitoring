@@ -146,7 +146,7 @@
                                             <div class="form-group">
                                                 <label>Test Method Group</label>
                                                 <select name="id_methodgroup"  class="form-control" required>
-                                                    <option selected disabled>PILIH</option>
+                                                    <option value="">Select</option>
                                                     <?php foreach ($methodgroup as $u): ?>
                                                     <option value="<?= $u->id_methodgroup?>"><?= $u->method_group ?></option>
                                                     <?php endforeach ?>
@@ -157,7 +157,7 @@
                                             <div class="form-group">
                                                 <label>Model/Article Level</label>
                                                 <select name="ma_testmethod" class="form-control" required>
-                                                    <option selected disabled>PILIH</option>
+                                                    <option value="">Select</option>
                                                     <?php foreach ($level as $u): ?>
                                                     <option value="<?= $u->ma_testmethod?>"><?= $u->ma_testmethod ?></option>
                                                     <?php endforeach ?>
@@ -190,18 +190,18 @@
                                         <div class="col-md-2 pl-pr-1">
 
                                         </div>
-                                    <div class="col-md-2 pl-pr-1" hidden>
+                                    <!-- <div class="col-md-2 pl-pr-1" hidden>
                                         <div class="form-group">
                                             <br>
                                             <a href="#" type="button" class="btn btn-block btn-info">Batal</a>
                                         </div>
-                                    </div>
-                                    <div class="col-md-2 pl-pr-1" hidden>
+                                    </div> -->
+                                    <!-- <div class="col-md-2 pl-pr-1" hidden>
                                         <br>
                                             <div class="update ml-auto mr-auto">
                                                 <button type="submit" class="btn btn-block btn-info"></button>
                                             </div>
-                                    </div>
+                                    </div> -->
                                 </div>
                             </div>
                             <div class="card-footer">
@@ -213,7 +213,7 @@
                                 </div>
                                 <div class="col-md-1">
                                     <ol class="float-sm-right">
-                                        <button type="submit" class="btn btn-block btn-primary" value="Tambah">Submit</button>
+                                        <button type="submit" name="submit" value="Tambah" class="btn btn-block btn-primary">Submit</button>
                                     </ol>
                                 </div>      
                             </div>
