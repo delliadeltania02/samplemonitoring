@@ -235,19 +235,15 @@ table.dataTable td img {
     <?php endif; ?>
 
     <!-- MULAI TEST / LIHAT PROSES -->
-    <?php if ($u->total_test == 0): ?>
-        <button hidden
-            class="btn btn-primary btn-sm btnMulaiTest"
-            data-id_penerimaan="<?= $u->id_penerimaan ?>"
-            data-report_no="<?= $u->report_no ?>">
-            <i class="fa fa-play"></i> Mulai Test
+     <?php if ($u->total_test == 0): ?>
+      <button class="btn btn-secondary btn-sm" disabled>
+        <i class="fa fa-play"></i> Mulai Test
+      </button>
+      <?php else: ?>
+        <button class="btn btn-success btn-sm" disabled>
+          <i class="fa fa-flask"></i> Proses QC
         </button>
-    <?php else: ?>
-        <a href="<?= site_url('c_transaksi/detail_kualitas/'.$u->id_penerimaan) ?> disabled"
-           class="btn btn-success btn-sm">
-            <i class="fa fa-flask"></i> Proses QC
-        </a>
-    <?php endif; ?>
+        <?php endif; ?>
 
 </td>
 
