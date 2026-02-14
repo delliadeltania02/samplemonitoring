@@ -128,7 +128,7 @@
         <div class="row">
             <div class="col-md-12">
                  <?php foreach($editmethod as $u){ ?>
-                        <form action="<?php echo site_url('c_method/editaksi_testmethod'); ?>" method="post">
+                        <form action="<?php echo site_url('testMatrix/editaksiMethod'); ?>" method="post">
                             <div class="card-body">
                                 <div class="row">
                                     <div class="col-md-12 pl-pr-1">
@@ -202,26 +202,24 @@
                                                 <a href="#" type="button" class="btn btn-block btn-info">Batal</a>
                                             </div>
                                         </div>
-                                        <div class="col-md-2 pl-pr-1" hidden>
+                                        <!-- <div class="col-md-2 pl-pr-1" hidden>
                                             <br>
                                                 <div class="update ml-auto mr-auto">
                                                     <button type="submit" class="btn btn-block btn-info"></button>
                                                 </div>
-                                        </div>
+                                        </div> -->
                                 </div>
                             </div>
                             <div class="card-footer">
                                 <div class="col-md-1">
-                                        <a href="<?=site_url('c_method/index_testmethod')?>" type="button" class="btn btn-block" style="background-color: #36454F;color: white;">Back</a>
+                                        <a href="<?=site_url('testMatrix/indexMethod')?>" type="button" class="btn btn-block" style="background-color: #36454F;color: white;">Back</a>
                                 </div>
                                 <div class="col-md-10">
                                     
                                 </div>
-                                <div class="col-md-1">
-                                    <ol class="float-sm-right">
-                                        <button type="submit" class="btn btn-block" value="Tambah" style="background-color: #36454F;color: white;">Submit</button>
-                                    </ol>
-                                </div>      
+                                <div class="col-md-1 d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-block" style="background-color: #36454F; color: white;">Submit</button>
+                                </div>
                             </div>
                         </form>
                     <?php } ?>

@@ -127,7 +127,7 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-12">
-            <form action="<?php echo site_url('c_testMatrix/tambahaksiMethod'); ?>" method="post">
+            <form action="<?php echo site_url('testMatrix/tambahaksiMethod'); ?>" method="post">
                             <div class="card-body">
                                 <div class="row">
                                     <div class="col-md-12 pl-pr-1">
@@ -206,7 +206,7 @@
                             </div>
                             <div class="card-footer">
                                 <div class="col-md-1">
-                                        <a href="<?=site_url('c_method/index_testmethod')?>" type="button" class="btn btn-block btn-primary" >Back</a>
+                                        <a href="<?=site_url('testMatrix/indexMethod')?>" type="button" class="btn btn-block btn-primary" >Back</a>
                                 </div>
                                 <div class="col-md-10">
                                     

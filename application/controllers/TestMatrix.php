@@ -50,6 +50,12 @@ class TestMatrix extends CI_Controller {
 
         redirect('testMatrix/indexMethod');
     }
+    public function hapus_testmethod($id_testmethod)
+    {
+        $this->db->where('id_testmethod', $id_testmethod);
+        $this->db->delete('tbl_testmethod');
+        redirect('testMatrix/indexMethod');
+        }
 
     public function editMethod($id_testmethod)
     {
@@ -87,7 +93,7 @@ class TestMatrix extends CI_Controller {
         );
 
         $this->m_testMatrix->editaksiMethod($id_testmethod, $data);
-        redirect ('c_testMatrix/indexMethod', $data);
+        redirect('testMatrix/indexMethod');
     }
 
     public function indexMatrix()

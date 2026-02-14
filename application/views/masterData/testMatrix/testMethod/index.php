@@ -180,7 +180,7 @@ h5 {
                             <td><?= $u->remakrs?></td>
                             <td>
                                 <a href="<?=site_url('testMatrix/editMethod/').$u->id_testmethod?>" class="btn btn-outline-info btn-sm"><i class="fa fa-edit"></i></a>
-                                <a href="<?=site_url('c_method/hapus_testmethod/').$u->id_testmethod?>" onclick="return confirm('Apakah Anda Yakin Ingin Menghapus <?php echo $u->method_name?>?');" class="btn btn-outline-danger btn-sm remove"><i class="fa fa-trash"></i></a>
+                                <a href="<?=site_url('testMatrix/hapus_testmethod/').$u->id_testmethod?>" onclick="return confirm('Apakah Anda Yakin Ingin Menghapus <?php echo $u->method_name?>?');" class="btn btn-outline-danger btn-sm remove"><i class="fa fa-trash"></i></a>
                             </td>
                         </tr>
                         <?php } ?>
