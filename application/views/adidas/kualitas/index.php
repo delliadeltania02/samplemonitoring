@@ -242,52 +242,6 @@ table.dataTable td img {
                               Clear
                             </button>
                           </div>
-
-
-                        <!-- LIST CHECKBOX -->
-                        <div id="list-test-required"></div>
-
-                      </div>
-                    </div><br>
-                  </div>
-                  <div class="form-group">
-                    <label>Color </label>
-                  <!-- DROPDOWN COLOR-->
-                    <div class="dropdown w-100">
-                      <button
-                        class="btn btn-outline-secondary w-100 text-left dropdown-toggle"
-                        type="button"
-                        data-toggle="dropdown">
-                        Pilih Warna
-                      </button>
-                      <div class="dropdown-menu w-100 p-2"
-                          style="max-height:260px; overflow-y:auto;">
-                        <!-- SEARCH -->
-                        <input type="text"
-                              class="form-control form-control-sm mb-2"
-                              id="searchColor"
-                              placeholder="Cari warna...">
-
-                          <!-- ACTION BUTTON -->
-                          <div class="d-flex justify-content-between mb-2">
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-primary"
-                                    id="btnSelectAllColor">
-                              Select All
-                            </button>
-
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-danger"
-                                    id="btnClearAllolor">
-                              Clear
-                            </button>
-                          </div>
-
-
-                        <!-- LIST CHECKBOX -->
-                        <div id="list-color"></div>
-
-                      </div>
                     </div>
                   </div>
               </div>

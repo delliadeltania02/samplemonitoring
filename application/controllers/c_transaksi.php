@@ -54,7 +54,6 @@ public function proses_kualitas()
     $id_penerimaan = $this->input->post('id_penerimaan');
     $report_no     = $this->input->post('report_no');
     $tests         = $this->input->post('test_required'); // array
-    $colors        = $this->input->post('color');         // array (optional)
 
     if (empty($id_penerimaan) || empty($report_no) || empty($tests)) {
         $this->session->set_flashdata('error', 'Test belum dipilih');
@@ -69,11 +68,6 @@ public function proses_kualitas()
         'status'        => 'proses',
         'created_at'    => date('Y-m-d H:i:s')
     ];
-
-    // kalau color ada → simpan sebagai JSON
-    if (!empty($colors)) {
-        $data['color'] = json_encode(array_values($colors));
-    }
 
     $this->db->insert('tbl_kualitas', $data);
 
